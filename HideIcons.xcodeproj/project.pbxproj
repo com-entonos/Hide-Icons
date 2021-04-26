@@ -9,18 +9,20 @@
 /* Begin PBXBuildFile section */
 		2C5E23BC26365265008D27BE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C5E23BB26365265008D27BE /* AppDelegate.swift */; };
 		2C5E23BE26365265008D27BE /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C5E23BD26365265008D27BE /* ViewController.swift */; };
-		2C5E23C026365269008D27BE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2C5E23BF26365269008D27BE /* Assets.xcassets */; };
 		2C5E23C326365269008D27BE /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 2C5E23C126365269008D27BE /* Main.storyboard */; };
+		2C5E23CD263654DE008D27BE /* Hider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C5E23CC263654DE008D27BE /* Hider.swift */; };
+		2C5E23D126367747008D27BE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2C5E23D026367747008D27BE /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		2C5E23B826365265008D27BE /* HideIcons.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HideIcons.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2C5E23BB26365265008D27BE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		2C5E23BD26365265008D27BE /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
-		2C5E23BF26365269008D27BE /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		2C5E23C226365269008D27BE /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		2C5E23C426365269008D27BE /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		2C5E23C526365269008D27BE /* HideIcons.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = HideIcons.entitlements; sourceTree = "<group>"; };
+		2C5E23CC263654DE008D27BE /* Hider.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = Hider.swift; path = ../../Hider.swift; sourceTree = "<group>"; };
+		2C5E23D026367747008D27BE /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -55,7 +57,8 @@
 			children = (
 				2C5E23BB26365265008D27BE /* AppDelegate.swift */,
 				2C5E23BD26365265008D27BE /* ViewController.swift */,
-				2C5E23BF26365269008D27BE /* Assets.xcassets */,
+				2C5E23CC263654DE008D27BE /* Hider.swift */,
+				2C5E23D026367747008D27BE /* Assets.xcassets */,
 				2C5E23C126365269008D27BE /* Main.storyboard */,
 				2C5E23C426365269008D27BE /* Info.plist */,
 				2C5E23C526365269008D27BE /* HideIcons.entitlements */,
@@ -120,7 +123,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				2C5E23C026365269008D27BE /* Assets.xcassets in Resources */,
+				2C5E23D126367747008D27BE /* Assets.xcassets in Resources */,
 				2C5E23C326365269008D27BE /* Main.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -132,6 +135,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2C5E23CD263654DE008D27BE /* Hider.swift in Sources */,
 				2C5E23BE26365265008D27BE /* ViewController.swift in Sources */,
 				2C5E23BC26365265008D27BE /* AppDelegate.swift in Sources */,
 			);
@@ -202,7 +206,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 11.1;
+				MACOSX_DEPLOYMENT_TARGET = 10.12;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -257,7 +261,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 11.1;
+				MACOSX_DEPLOYMENT_TARGET = 10.12;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
@@ -281,6 +285,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 10.12;
 				PRODUCT_BUNDLE_IDENTIFIER = com.entonos.HideIcons;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
@@ -302,6 +307,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 10.12;
 				PRODUCT_BUNDLE_IDENTIFIER = com.entonos.HideIcons;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
