@@ -20,6 +20,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     let menuPicture = NSImage(named: "BBarButtonImage")
     let menuNoPicture = NSImage(named: "AlphaBarButtonImage")
     
+    // to figure out if Services started the app
+    var startDate: Date!
+    
     // start out w/ menu item visible
     var menuHidden = false
     
@@ -28,15 +31,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         
+        // date the app started + 1 second
+        startDate = Date(timeIntervalSinceNow: TimeInterval(1.0))
+        
         // assign image to menu item
         statusItem.button?.image = menuPicture
         
         // let's go hide icons
         toggle(nil)
-        
-        // create some Services
-        //NSApp.servicesProvider = self //toggle(nil)
-        //NSApplication.shared.servicesProvider = self
         
         // this should capture in/out of Dark Mode
         if #available(OSX 10.14, *) {
@@ -48,12 +50,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
         }
+        
+        // create some Services
+        NSApp.servicesProvider = self
+        NSUpdateDynamicServices()
+        //NSApplication.shared.servicesProvider = self
+        
     }
 
     func applicationWillTerminate(_ aNotification: Notification) {
         // Insert code here to tear down your application
     }
-    
+    @objc func toggleService(_ pboard: NSPasteboard, userData: String, error: NSErrorPointer) {
+        if Date() > startDate { //hack to see if Service started the app, if so don't toggle since we are already hiding icons
+            toggle(nil)
+        }
+    }
     // called when menu item should be hidden or shown
     @objc func menuPic(_ sender: Any?) {
         if menuHidden {
