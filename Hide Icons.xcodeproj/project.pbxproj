@@ -15,7 +15,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		2C5E23B826365265008D27BE /* HideIcons.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HideIcons.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2C5E23B826365265008D27BE /* Hide Icons.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Hide Icons.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		2C5E23BB26365265008D27BE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		2C5E23BD26365265008D27BE /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
 		2C5E23C226365269008D27BE /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
@@ -47,7 +47,7 @@
 		2C5E23B926365265008D27BE /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				2C5E23B826365265008D27BE /* HideIcons.app */,
+				2C5E23B826365265008D27BE /* Hide Icons.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -69,9 +69,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		2C5E23B726365265008D27BE /* HideIcons */ = {
+		2C5E23B726365265008D27BE /* Hide Icons */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 2C5E23C826365269008D27BE /* Build configuration list for PBXNativeTarget "HideIcons" */;
+			buildConfigurationList = 2C5E23C826365269008D27BE /* Build configuration list for PBXNativeTarget "Hide Icons" */;
 			buildPhases = (
 				2C5E23B426365265008D27BE /* Sources */,
 				2C5E23B526365265008D27BE /* Frameworks */,
@@ -81,9 +81,9 @@
 			);
 			dependencies = (
 			);
-			name = HideIcons;
+			name = "Hide Icons";
 			productName = HideIcons;
-			productReference = 2C5E23B826365265008D27BE /* HideIcons.app */;
+			productReference = 2C5E23B826365265008D27BE /* Hide Icons.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -100,7 +100,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 2C5E23B326365265008D27BE /* Build configuration list for PBXProject "HideIcons" */;
+			buildConfigurationList = 2C5E23B326365265008D27BE /* Build configuration list for PBXProject "Hide Icons" */;
 			compatibilityVersion = "Xcode 9.3";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -113,7 +113,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				2C5E23B726365265008D27BE /* HideIcons */,
+				2C5E23B726365265008D27BE /* Hide Icons */,
 			);
 		};
 /* End PBXProject section */
@@ -317,7 +317,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		2C5E23B326365265008D27BE /* Build configuration list for PBXProject "HideIcons" */ = {
+		2C5E23B326365265008D27BE /* Build configuration list for PBXProject "Hide Icons" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				2C5E23C626365269008D27BE /* Debug */,
@@ -326,7 +326,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		2C5E23C826365269008D27BE /* Build configuration list for PBXNativeTarget "HideIcons" */ = {
+		2C5E23C826365269008D27BE /* Build configuration list for PBXNativeTarget "Hide Icons" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				2C5E23C926365269008D27BE /* Debug */,

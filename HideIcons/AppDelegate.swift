@@ -54,18 +54,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // create some Services
         NSApp.servicesProvider = self
         NSUpdateDynamicServices()
-        //NSApplication.shared.servicesProvider = self
         
     }
 
     func applicationWillTerminate(_ aNotification: Notification) {
         // Insert code here to tear down your application
     }
+    
+    // called from Services menu
     @objc func toggleService(_ pboard: NSPasteboard, userData: String, error: NSErrorPointer) {
         if Date() > startDate { //hack to see if Service started the app, if so don't toggle since we are already hiding icons
             toggle(nil)
         }
     }
+    
     // called when menu item should be hidden or shown
     @objc func menuPic(_ sender: Any?) {
         if menuHidden {
