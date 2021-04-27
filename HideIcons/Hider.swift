@@ -110,20 +110,16 @@ extension NSImage { //don't need to do an extension, but it appears fun, so let'
 
             // we need windows owned by Dock
             guard let owner = window["kCGWindowOwnerName"] as? String else {continue}
-            if owner != "Dock" {
-                continue
-            }
+            if owner != "Dock" { continue }
             // we need windows named like "Desktop Picture %"
             guard let name = window["kCGWindowName"] as? String else {continue}
-            if !name.hasPrefix("Desktop Picture") {
-                continue
-            }
+            if !name.hasPrefix("Desktop Picture") { continue }
             // ok, this belongs to a screen. grab a picture of it and append to the return array
             guard let index = window["kCGWindowNumber"] as? CGWindowID else {continue}  //pendantic
             let cgImage = CGWindowListCreateImage(CGRect.null, CGWindowListOption(arrayLiteral: CGWindowListOption.optionIncludingWindow), index, CGWindowImageOption.nominalResolution)
             images.append(NSImage(cgImage: cgImage!, size: NSMakeSize(CGFloat(cgImage!.width), CGFloat(cgImage!.height))))
         }
-        // return the array of Desktop pictures
+        // return the array of Desktop picture(s)
         return images
     }
 }
