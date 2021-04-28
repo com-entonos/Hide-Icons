@@ -1,12 +1,32 @@
-<key>CFBundleDevelopmentRegion</key>
-<string>en</string>
-<key>CFBundleIdentifier</key>
-<string>com.entonos.HideIcons.help</string>
-<key>HPDBookAccessPath</key>
-<string>index.html</string>
-<key>HPDBookIconPath</key>
-<string>Hide_256x256.png</string>
-<key>HPDBookIndexPath</key>
-<string>HideIcons.helpindex</string>
-<key>HPDBookTitle</key>
-<string>Hide Icons Help</string>
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+        <key>CFBundleDevelopmentRegion</key>
+        <string>en</string>
+        <key>CFBundleIdentifier</key>
+        <string>com.parker9.HideIcons.help</string>
+        <key>CFBundleInfoDictionaryVersion</key>
+        <string>6.0</string>
+        <key>CFBundlePackageType</key>
+        <string>BNDL</string>
+        <key>CFBundleShortVersionString</key>
+        <string>4.0</string>
+        <key>CFBundleSignature</key>
+        <string>hbwr</string>
+        <key>CFBundleVersion</key>
+        <string>1</string>
+        <key>HPDBookAccessPath</key>
+        <string>index.html</string>
+        <key>HPDBookIconPath</key>
+        <string>Hide_256x256.png</string>
+        <key>HPDBookIndexPath</key>
+        <string>HideIcons.helpindex</string>
+        <key>HPDBookTitle</key>
+        <string>Hide Icons Help</string>
+        <key>HPDBookType</key>
+        <string>3</string>
+        <key>HPDBookUsesExternalViewer</key>
+        <false/>
+</dict>
+</plist>

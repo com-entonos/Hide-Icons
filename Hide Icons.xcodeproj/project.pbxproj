@@ -11,6 +11,7 @@
 		2C5E23C326365269008D27BE /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 2C5E23C126365269008D27BE /* Main.storyboard */; };
 		2C5E23D126367747008D27BE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2C5E23D026367747008D27BE /* Assets.xcassets */; };
 		2C5E23DC2637814E008D27BE /* Hider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C5E23DB2637814E008D27BE /* Hider.swift */; };
+		2C5E23F4263A0052008D27BE /* HideIcons.help in Resources */ = {isa = PBXBuildFile; fileRef = 2C5E23F3263A0052008D27BE /* HideIcons.help */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -21,6 +22,7 @@
 		2C5E23C526365269008D27BE /* HideIcons.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = HideIcons.entitlements; sourceTree = "<group>"; };
 		2C5E23D026367747008D27BE /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		2C5E23DB2637814E008D27BE /* Hider.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Hider.swift; sourceTree = "<group>"; };
+		2C5E23F3263A0052008D27BE /* HideIcons.help */ = {isa = PBXFileReference; lastKnownFileType = folder; name = HideIcons.help; path = HideIcons/Resources/HideIcons.help; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -37,6 +39,7 @@
 		2C5E23AF26365265008D27BE = {
 			isa = PBXGroup;
 			children = (
+				2C5E23F3263A0052008D27BE /* HideIcons.help */,
 				2C5E23BA26365265008D27BE /* HideIcons */,
 				2C5E23B926365265008D27BE /* Products */,
 			);
@@ -120,6 +123,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2C5E23F4263A0052008D27BE /* HideIcons.help in Resources */,
 				2C5E23D126367747008D27BE /* Assets.xcassets in Resources */,
 				2C5E23C326365269008D27BE /* Main.storyboard in Resources */,
 			);
@@ -272,8 +276,10 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = HideIcons/HideIcons.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = XJ9ZL4KYVN;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = HideIcons/Info.plist;
@@ -294,8 +300,10 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = HideIcons/HideIcons.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = XJ9ZL4KYVN;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = HideIcons/Info.plist;
