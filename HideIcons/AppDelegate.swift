@@ -73,11 +73,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     // called from Services menu
     @objc func toggleService(_ pboard: NSPasteboard, userData: String, error: NSErrorPointer) {
-       // if Date() > startDate { //hack to see if Service started the app, if so don't toggle since we are already hiding icons
+        if Date() > startDate { //hack to see if Service started the app, if so don't toggle since we are already hiding icons
             toggle(nil)
        // } else {
        //     statusItem = nil
-       // }
+        }
     }
     
     // called when menu item should be hidden or shown
