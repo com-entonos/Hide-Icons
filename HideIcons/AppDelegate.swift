@@ -121,12 +121,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             
             menu.addItem(NSMenuItem.separator())
             menu.addItem(NSMenuItem(title: "Say \"Hi\" to entonos", action: #selector(AppDelegate.donateClicked(_:)), keyEquivalent: ""))
+            
+            menu.addItem(NSMenuItem.separator())
+            menu.addItem(NSMenuItem(title: "Help", action: #selector(AppDelegate.getHelp(_:)), keyEquivalent: ""))
+            
             menu.addItem(NSMenuItem.separator())
             menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: ""))
 
             sItem.menu = menu
         }
       
+    }
+    @objc func getHelp(_ sender: Any?) {
+        if let book = Bundle.main.object(forInfoDictionaryKey: "CFBundleHelpBookName") as? NSHelpManager.BookName {
+            NSHelpManager.shared.openHelpAnchor("Welcome", inBook: book)
+        }
     }
     
     @objc func removeMenu(_ sender: Any?) {
