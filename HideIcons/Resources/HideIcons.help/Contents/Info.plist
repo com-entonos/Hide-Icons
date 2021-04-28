@@ -1,0 +1,12 @@
+<key>CFBundleDevelopmentRegion</key>
+<string>en</string>
+<key>CFBundleIdentifier</key>
+<string>com.entonos.HideIcons.help</string>
+<key>HPDBookAccessPath</key>
+<string>index.html</string>
+<key>HPDBookIconPath</key>
+<string>Hide_256x256.png</string>
+<key>HPDBookIndexPath</key>
+<string>HideIcons.helpindex</string>
+<key>HPDBookTitle</key>
+<string>Hide Icons Help</string>
