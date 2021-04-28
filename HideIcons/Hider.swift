@@ -8,13 +8,18 @@
 
 import Cocoa
 
+extension Notification.Name {
+    static let doHide = NSNotification.Name("doHide")
+    static let spaceChange = NSNotification.Name("spaceChange")
+}
+
 class Hider {
     init() {  // get notified when user wants to toggle
-        NotificationCenter.default.addObserver(self, selector: #selector(self.doHide), name: NSNotification.Name("doHide"), object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(self.doHide), name: .doHide, object: nil)
     }
     
     deinit {
-        NotificationCenter.default.removeObserver(self, name: NSNotification.Name("doHide"), object: nil)
+        NotificationCenter.default.removeObserver(self, name: .doHide, object: nil)
     }
     
     var transWindow = [NSWindow]()  // our current Desktop pictures (empty means we're in the Show state)
@@ -33,12 +38,12 @@ class Hider {
             // get notified when Spaces or Screens change
             NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(self.spaceChange), name: NSWorkspace.activeSpaceDidChangeNotification, object: nil)
             NotificationCenter.default.addObserver(self, selector: #selector(self.screenChanged), name: NSApplication.didChangeScreenParametersNotification, object: nil)
-            NotificationCenter.default.addObserver(self, selector: #selector(self.spaceChange), name: NSNotification.Name("spaceChange"), object: nil)
+            NotificationCenter.default.addObserver(self, selector: #selector(self.spaceChange), name: .spaceChange, object: nil)
             BGTimer = Timer.scheduledTimer(timeInterval: TimeInterval(60.0), target: self, selector: #selector(self.spaceChange), userInfo: nil, repeats: true)  // this is a lazy capture if the desktop pictures vary w/ time
         } else {
             // stop notifications for Screen and Space chages and timer
             BGTimer?.invalidate()
-            NotificationCenter.default.removeObserver(self, name: NSNotification.Name("spaceChange"), object: nil)
+            NotificationCenter.default.removeObserver(self, name: .spaceChange, object: nil)
             NotificationCenter.default.removeObserver(self, name: NSApplication.didChangeScreenParametersNotification, object: nil)
             NSWorkspace.shared.notificationCenter.removeObserver(self, name: NSWorkspace.activeSpaceDidChangeNotification, object: nil)
             // teardown
