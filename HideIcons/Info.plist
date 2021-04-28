@@ -30,8 +30,6 @@
 	<string>NSApplication</string>
 	<key>LSUIElement</key>
 	<true/>
-	<key>LSBackgroundOnly</key>
-	<false/>
 	<key>NSServices</key>
 	<array>
 		<dict>
