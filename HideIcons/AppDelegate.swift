@@ -35,7 +35,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem?.button?.image = menuPicture
         
         // let's go hide icons
-        toggle(nil)
+        //toggle(nil)
+        //toggle(nil)
+        //toggle(nil)
         
         // this should capture in/out of Dark Mode
         if #available(OSX 10.14, *) {
@@ -48,12 +50,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         
-        // date the app started + 1 second
-        startDate = Date(timeIntervalSinceNow: TimeInterval(1.0))
+        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false, block: { _ in self.toggle(nil)})
         
         // create some Services
         NSApp.servicesProvider = self
         NSUpdateDynamicServices()
+        
+        // date the app started + 2 second
+        startDate = Date(timeIntervalSinceNow: TimeInterval(2.0))
         
     }
 
