@@ -67,19 +67,17 @@ class Hider {
     }
     
     func createWin(_ screen: NSScreen) -> NSWindow {
-        // create a window w/ the same size as the screen we're given
-        return resetWin(NSWindow(contentRect: NSMakeRect(0, 0, NSWidth(screen.frame), NSHeight(screen.frame)), styleMask: .borderless, backing: .buffered, defer: true, screen: screen))
-    }
-    
-    func resetWin(_ win: NSWindow) -> NSWindow {
-        win.collectionBehavior = NSWindow.CollectionBehavior.canJoinAllSpaces          // we want the window to follow Spaces around
+        let win = NSWindow(contentRect: screen.frame, styleMask: .borderless, backing: .buffered, defer: true, screen: screen)
+        win.setFrame(screen.frame, display: false, animate: false)
+        
+        win.collectionBehavior = .canJoinAllSpaces  // we want the window to follow Spaces around
         win.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.backstopMenu)))  //hack? this makes mission control and expose ignore the window
         // rest is to make the window dumb
         win.canHide = false
         win.isExcludedFromWindowsMenu = true
         win.hidesOnDeactivate = false
         win.discardCursorRects()
-        win.discardEvents(matching: NSEvent.EventTypeMask.any, before: nil)
+        win.discardEvents(matching: .any, before: nil)
         win.ignoresMouseEvents = true
         win.orderBack(nil)
         win.isRestorable = false
@@ -91,13 +89,10 @@ class Hider {
         var desktopPics = NSImage.desktopPictures()  // grab picture(s) of the Desktop(s)
         for (index, screen) in NSScreen.screens.enumerated() {  // cycle through the physical Screens
             for (numPic, desktopPic) in desktopPics.enumerated() {  // find the first desktop picture that has the same size as this screen
-                if desktopPic.size.height == screen.frame.height && desktopPic.size.width == screen.frame.width {
-                    // get an imageView w/ the correct size and picture
-                    let imageView = NSImageView(frame: screen.frame)
-                    imageView.image = desktopPic
-                    // make sure the window has the same size as the screen
-                    if screen.frame != transWindow[index].frame {transWindow[index].setFrame(screen.frame, display: false, animate: false)}
+                if desktopPic.size == screen.frame.size {
                     // ok, replace the view
+                    let imageView = NSImageView(image: desktopPic)
+                    if screen.frame != transWindow[index].frame {transWindow[index].setFrame(screen.frame, display: false, animate: false)}
                     transWindow[index].contentView = imageView
                     // hopefully to avoid problems on which screen and which desktop, get rid of the ones we've done
                     desktopPics.remove(at: numPic)
@@ -111,18 +106,29 @@ extension NSImage { //don't need to do an extension, but it appears fun, so let'
     
     static func desktopPictures() -> [NSImage] {  // for each desktop we find, take a picture add it onto an array and return it
         var images = [NSImage]()
+        
+        // need to find the Desktop window...
+        //    go through all windows that are on screen
+        //for window in CGWindowListCopyWindowInfo(.optionAll, kCGNullWindowID) as! [[ String : Any]] {
         for window in CGWindowListCopyWindowInfo(.optionOnScreenOnly, kCGNullWindowID) as! [[ String : Any]] {
 
-            // we need windows owned by Dock
+            // we need window owned by Dock
             guard let owner = window["kCGWindowOwnerName"] as? String else {continue}
             if owner != "Dock" { continue }
-            // we need windows named like "Desktop Picture %"
+            // we need window named like "Desktop Picture %"
             guard let name = window["kCGWindowName"] as? String else {continue}
             if !name.hasPrefix("Desktop Picture") { continue }
             // ok, this belongs to a screen. grab a picture of it and append to the return array
-            guard let index = window["kCGWindowNumber"] as? CGWindowID else {continue}  //pendantic
-            let cgImage = CGWindowListCreateImage(CGRect.null, CGWindowListOption(arrayLiteral: CGWindowListOption.optionIncludingWindow), index, CGWindowImageOption.nominalResolution)
-            images.append(NSImage(cgImage: cgImage!, size: NSMakeSize(CGFloat(cgImage!.width), CGFloat(cgImage!.height))))
+            let index = window["kCGWindowNumber"] as! CGWindowID
+            
+            // grab the screen's worth picture CGImag?
+            guard let cgImage = CGWindowListCreateImage(.null, .optionIncludingWindow, index, .nominalResolution) else { continue }  // don't do .infinity, freaks out early versions of macOS
+            
+            // TODO kCGWindowBounds is string of the coordinates of the rectangle, specified in screen space, where the origin is in the upper-left corner of the main display. way to tie to screen?
+            //  print(owner,name,index,window["kCGWindowBounds"],window["kCGWindowIsOnscreen"])
+            
+            // so, owned by Dock and has name starting w/ "Desktop Picture"
+            images.append(NSImage(cgImage: cgImage, size: NSZeroSize)) //ZeroSize means it will use image's size
         }
         // return the array of Desktop picture(s)
         return images
