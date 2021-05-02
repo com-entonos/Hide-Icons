@@ -124,10 +124,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             menu.setSubmenu(subMenu, for: menuItem)
             
             menu.addItem(NSMenuItem.separator())
-            menu.addItem(NSMenuItem(title: "Say \"Hi\" to entonos", action: #selector(AppDelegate.donateClicked(_:)), keyEquivalent: ""))
-            
-            menu.addItem(NSMenuItem.separator())
             menu.addItem(NSMenuItem(title: "Help", action: #selector(AppDelegate.getHelp(_:)), keyEquivalent: ""))
+            menu.addItem(NSMenuItem(title: "About", action: #selector(AppDelegate.about(_:)), keyEquivalent: ""))
+            menu.addItem(NSMenuItem(title: "Say \"Hi\" to entonos", action: #selector(AppDelegate.donateClicked(_:)), keyEquivalent: ""))
             
             menu.addItem(NSMenuItem.separator())
             menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: ""))
@@ -148,9 +147,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     // say "Hi"
     @objc func donateClicked(_ sender: Any?) {
-        //let url = URL(string: "https://entonos.com/index.php/the-geek-shop/") // NO via Apple because of paypal donate link. apple's math is about as good as there physics engine (i.e. 30% of 0 is still 0)
-        let url = URL(string: "https://entonos.com/")
-        NSWorkspace.shared.open(url!)
+        NSWorkspace.shared.open(URL(string: "https://entonos.com/index.php/the-geek-shop/")!) // NO via Apple because of paypal donate link. apple's math is about as good as their physics engine (i.e. 30% of 0 is still 0)
+        //NSWorkspace.shared.open(URL(string: "https://entonos.com/")!)
+    }
+    
+    @objc func about(_ sender: Any?) {
+        //let opts = [ NSApplication.AboutPanelOptionKey : Any?]()
+        //NSApplication.shared.orderFrontStandardAboutPanel(opts)
+        
+        NSApplication.shared.orderFrontStandardAboutPanel(nil)
     }
 }
 
