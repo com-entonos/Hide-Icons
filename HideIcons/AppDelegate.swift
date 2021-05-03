@@ -7,6 +7,7 @@
 
 import Cocoa
 
+//@NSApplicationMain // for older versions of xcode
 @main
 class AppDelegate: NSObject, NSApplicationDelegate {
 
@@ -35,21 +36,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem?.button?.image = menuPicture
         
         // let's go hide icons
-        //toggle(nil)
-        //toggle(nil)
-        //toggle(nil)
         
         // this should capture in/out of Dark Mode
         if #available(OSX 10.14, *) {
             observation = NSApp.observe(\.effectiveAppearance) { (app, _) in
-                if self.hider.hidden {
-                    print("effectiveAppearance change triggered")
+                if self.hider.hidden { // give 3 second delay to make sure the Desktop did in fact update
                     Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false, block: { _ in
                                             NotificationCenter.default.post(name: .spaceChange, object: nil) })
                 }
             }
         }
         
+        // let's go hide icons (in 1 second so we get out of this function so later versions of macOS are happy
         Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false, block: { _ in self.toggle(nil)})
         
         // create some Services
@@ -67,7 +65,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if statusItem == nil || menuHidden {
-            print("turning on menu")
             if statusItem == nil { statusItem = NSStatusBar.system.statusItem(withLength:NSStatusItem.squareLength) }
             menuHidden = true
             menuPic(nil)
@@ -79,8 +76,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func toggleService(_ pboard: NSPasteboard, userData: String, error: NSErrorPointer) {
         if Date() > startDate { //hack to see if Service started the app, if so don't toggle since we are already hiding icons
             toggle(nil)
-       // } else {
-       //     statusItem = nil
+        } else {
+            statusItem = nil // otherwise just turn off menu
         }
     }
     
