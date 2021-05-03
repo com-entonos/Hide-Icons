@@ -24,7 +24,6 @@ class Hider {
     
     class MyWindow : NSWindow {
         var cgID: CGWindowID = 0
-        var name: String = ""
         var showing: Bool = false
         func setWin(imageView: NSImageView, showing: Bool, hidden: Bool) {
             self.contentView = imageView
