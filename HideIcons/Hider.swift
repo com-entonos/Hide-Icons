@@ -13,21 +13,6 @@ extension Notification.Name {
     static let spaceChange = NSNotification.Name("spaceChange")
 }
 
-class MyWindow : NSWindow {
-    var cgID: CGWindowID = 0
-    var name: String = ""
-    var showing: Bool = false
-    func setWin(imageView: NSImageView, showing: Bool, hidden: Bool) {
-        self.contentView = imageView
-        self.showing = true
-        if showing {
-            self.orderFront(nil)
-            self.collectionBehavior = .stationary
-        }
-        if !hidden { self.orderOut(nil) }
-    }
-}
-
 class Hider {
     init() {  // get notified when user wants to toggle
         NotificationCenter.default.addObserver(self, selector: #selector(self.doHide), name: .doHide, object: nil)
@@ -35,6 +20,25 @@ class Hider {
     
     deinit {
         NotificationCenter.default.removeObserver(self, name: .doHide, object: nil)
+    }
+    
+    class MyWindow : NSWindow {
+        var cgID: CGWindowID = 0
+        var name: String = ""
+        var showing: Bool = false
+        func setWin(imageView: NSImageView, showing: Bool, hidden: Bool) {
+            self.contentView = imageView
+            self.showing = true
+            if showing {
+                self.orderFront(nil)
+                self.collectionBehavior = .stationary
+            }
+            if !hidden { self.orderOut(nil) }
+        }
+        init(contentRect: NSRect, styleMask style: NSWindow.StyleMask, backing backingStoreType: NSWindow.BackingStoreType, defer flag: Bool, index: CGWindowID) {
+            super.init(contentRect: contentRect, styleMask: .borderless, backing: .buffered, defer: true)
+            self.cgID = index
+        }
     }
     
     var myScreen = [NSScreen : [MyWindow]]() // for each screen, a list of Desktop windows
@@ -72,7 +76,7 @@ class Hider {
     }
     
     @objc func makeWindows(_ option: CGWindowListOption = .optionAll){  // make window for each desktop = Screens * Spaces
-        
+        //print("in makeWindows")
         // need to find the Desktop window...
         //    go through all windows (including those not in this Space
         for window in CGWindowListCopyWindowInfo(option, kCGNullWindowID) as! [[ String : Any]] {
@@ -90,15 +94,17 @@ class Hider {
             let imageView = NSImageView(image: NSImage(cgImage: cgImage, size: NSZeroSize))
             let showing = window["kCGWindowIsOnscreen"] as? Bool ?? false // is it in the active Space?
             
+            //print("look window:\(index) \"\(name)\" \(showing)")
             for screen in NSScreen.screens { // loop over screens to find where these pictures go...
+                //let desktopPic = NSWorkspace.shared.desktopImageURL(for: screen)?.lastPathComponent
                 // find window for this screen
                 let cWin = myScreen[screen]?.filter({$0.cgID == index}).first
                 if cWin != nil {  // window exists, just update image and settings
+                    //print("found window:\(cWin!.cgID) \"\(name)\" \"\(desktopPic!)\" \(showing)")
                     cWin?.setWin(imageView: imageView, showing: showing, hidden: hidden)
                 } else {  // new window for this screen
-                    //print("need to create a window!")
-                    let win = createWin(CGRect.init(dictionaryRepresentation: window["kCGWindowBounds"] as! CFDictionary)!)
-                    win.cgID = index  // remember the CGWindowID
+                    //print("create window: \(index) \"\(name)\" \"\(desktopPic!)\" \(showing)")
+                    let win = createWin(CGRect.init(dictionaryRepresentation: window["kCGWindowBounds"] as! CFDictionary)!, index: index)
                     win.setWin(imageView: imageView, showing: showing, hidden: hidden)
                     if myScreen[screen] == nil {  myScreen[screen] = [win] } else { myScreen[screen]!.append(win) } //?
                 }
@@ -108,8 +114,8 @@ class Hider {
         return
     }
     
-    func createWin(_ frame : CGRect) -> MyWindow {
-        let win = MyWindow(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: true)
+    func createWin(_ frame : CGRect, index: CGWindowID) -> MyWindow {
+        let win = MyWindow(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: true, index: index)
         win.setFrame(frame, display: false, animate: false)
         win.collectionBehavior = .canJoinAllSpaces  // we want the window to follow Spaces around
         win.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.backstopMenu)))  //hack? this makes mission control and expose ignore the window
