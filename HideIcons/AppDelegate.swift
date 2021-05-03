@@ -42,7 +42,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // this should capture in/out of Dark Mode
         if #available(OSX 10.14, *) {
             observation = NSApp.observe(\.effectiveAppearance) { (app, _) in
-                if self.hider.hidden() {
+                if self.hider.hidden {
                     print("effectiveAppearance change triggered")
                     Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false, block: { _ in
                                             NotificationCenter.default.post(name: .spaceChange, object: nil) })
@@ -92,12 +92,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             statusItem?.button?.image = menuNoPicture
         }
         menuHidden = !menuHidden
-        constructMenu(hider.hidden())
+        constructMenu(hider.hidden)
     }
     
     // called when icons should hidden or shown
     @objc func toggle(_ sender: Any?) {
-        constructMenu(!hider.hidden())
+        constructMenu(!hider.hidden)
         NotificationCenter.default.post(name: .doHide, object: nil)
     }
     
