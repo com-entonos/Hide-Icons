@@ -60,7 +60,10 @@ class Hider {  // class that covers desktop w/ pictures of desktop- invoked by n
                 NotificationCenter.default.addObserver(self, selector: #selector(self.screenChanged), name: .spaceChange, object: nil)  // user wants to toggle (via menu or shortcut)
             } else { // not first time, just show windows and update
                 for (_, wins) in myScreen {
-                    for win in wins { win.orderBack(nil) }
+                    for win in wins {
+                        if win.collectionBehavior == .stationary { win.orderFront(nil) }
+                        else { win.orderBack(nil) }
+                    }
                 }
                 makeWindows()
             }
