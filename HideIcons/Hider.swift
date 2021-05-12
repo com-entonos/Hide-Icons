@@ -23,36 +23,35 @@ class Hider {  // class that covers desktop w/ pictures of desktop- invoked by n
     }
     
     class MyWindow : NSWindow { // just add some data and methods for NSWindow- this will hold windows w/ Desktop pics
-        var cgID: CGWindowID
-        var showing: Bool
+        var cgID: CGWindowID  // CG window ID
+        
+        init(contentRect: NSRect, styleMask style: NSWindow.StyleMask, backing backingStoreType: NSWindow.BackingStoreType, defer flag: Bool, index: CGWindowID) {
+            self.cgID = index
+            super.init(contentRect: contentRect, styleMask: style, backing: backingStoreType, defer: flag)
+        }
+        
         func setWin(imageView: NSImageView, showing: Bool, hidden: Bool) {
             self.contentView = imageView
-            self.showing = showing
-            if showing {
+            if showing { // if this is currently showing, bring to front and pin it to this Space
                 self.orderFront(nil)
                 self.collectionBehavior = .stationary
             }
-            if !hidden { self.orderOut(nil) }
-        }
-        init(contentRect: NSRect, styleMask style: NSWindow.StyleMask, backing backingStoreType: NSWindow.BackingStoreType, defer flag: Bool, index: CGWindowID) {
-            self.cgID = index
-            self.showing = false
-            super.init(contentRect: contentRect, styleMask: style, backing: backingStoreType, defer: flag)
+            if !hidden { self.orderOut(nil) }  // showing desktop, don't show this window at all
         }
     }
     
     var myScreen = [NSScreen : [MyWindow]]() // for each screen, a list of Desktop windows corresponding to number of Spaces
     var BGTimer : Timer?    // lazy update for Desktop pics
-    var hidden_ = false
+    var hidden_ = false     // are icons hidden?
     
     var hidden: Bool {  // are icons currently hidden?
         get { return hidden_ }
         set (value) { hidden_ = value }
     }
     
-    @objc func doHide() { // toggle hide/show icons
-        hidden = !hidden
-        if hidden {  // appears the user want to hide icons
+    @objc func doHide() {
+        hidden = !hidden    // toggle hide/show icons
+        if hidden {         // appears the user want to hide icons
             if myScreen.isEmpty { // make windows for all of the Desktops on each screen (done only at start)
                 makeWindows()
                 // get notified when ...
@@ -97,7 +96,7 @@ class Hider {  // class that covers desktop w/ pictures of desktop- invoked by n
             if owner != "Dock" { continue }
             // we need window named like "Desktop Picture"
             guard let name = window["kCGWindowName"] as? String else {continue}
-            if !name.hasPrefix("Desktop Picture") { continue }
+            if !name.hasPrefix("Desktop Picture ") { continue }
             
             // ok, this is a Desktop. grab the CGWindowID (invariant?)
             let index = window["kCGWindowNumber"] as! CGWindowID
@@ -108,16 +107,16 @@ class Hider {  // class that covers desktop w/ pictures of desktop- invoked by n
             let rectS = CGRect.init(dictionaryRepresentation: window["kCGWindowBounds"] as! CFDictionary)!  // get CGRect in CG coordinates (not Screen coordinates)
             let rect = CGRect(x: rectS.origin.x, y: h0 - rectS.origin.y - rectS.height, width: rectS.width, height: rectS.height) // translate from CG to Screen rect: y_screen = h0 - y_CG - CG_height
             
-            //print("window:\(index) \"\(name)\" \(showing) \(rect)")
+            //print("window:\(index) \"\(name)\" \(showing) \(rect) \(option)")
             for screen in NSScreen.screens { // loop over screens to find where these pictures go...
                 // find window for this screen
-                let cWin = myScreen[screen]?.filter({$0.cgID == index && $0.frame == screen.frame}).first
+                let cWin = myScreen[screen]?.filter({$0.cgID == index && $0.frame == screen.frame}).last
                 if cWin != nil {  // window exists, just update image and settings
-                    //print("  F>\"\(NSWorkspace.shared.desktopImageURL(for: screen)!.lastPathComponent)\" \(screen.frame) \(screen.frame == rect)")
+                    //print("  F>\(screen.frame) \(cWin?.cgID ?? 0) \(showing) \"\(NSWorkspace.shared.desktopImageURL(for: screen)!.lastPathComponent)\"")
                     cWin?.setWin(imageView: imageView, showing: showing, hidden: hidden)
                     break // found a screen, get out of screen loop
                 } else if rect == screen.frame {  // new window for this screen
-                    //print("  A>\"\(NSWorkspace.shared.desktopImageURL(for: screen)!.lastPathComponent)\" \(screen.frame) \(screen.frame == rect)")
+                    //print("  A>\"\(NSWorkspace.shared.desktopImageURL(for: screen)!.lastPathComponent)\" \(screen.frame) \(index) \(showing)")
                     let win = createWin(rect, index)
                     win.setWin(imageView: imageView, showing: showing, hidden: hidden)
                     if myScreen[screen] == nil {  myScreen[screen] = [win] } else { myScreen[screen]!.append(win) } //?
