@@ -23,11 +23,11 @@ class Hider {  // class that covers desktop w/ pictures of desktop- invoked by n
     }
     
     class MyWindow : NSWindow { // just add some data and methods for NSWindow- this will hold windows w/ Desktop pics
-        var cgID: CGWindowID = 0
-        var showing: Bool = false
+        var cgID: CGWindowID
+        var showing: Bool
         func setWin(imageView: NSImageView, showing: Bool, hidden: Bool) {
             self.contentView = imageView
-            self.showing = true
+            self.showing = showing
             if showing {
                 self.orderFront(nil)
                 self.collectionBehavior = .stationary
@@ -35,8 +35,9 @@ class Hider {  // class that covers desktop w/ pictures of desktop- invoked by n
             if !hidden { self.orderOut(nil) }
         }
         init(contentRect: NSRect, styleMask style: NSWindow.StyleMask, backing backingStoreType: NSWindow.BackingStoreType, defer flag: Bool, index: CGWindowID) {
-            super.init(contentRect: contentRect, styleMask: .borderless, backing: .buffered, defer: true)
             self.cgID = index
+            self.showing = false
+            super.init(contentRect: contentRect, styleMask: style, backing: backingStoreType, defer: flag)
         }
     }
     
@@ -124,7 +125,7 @@ class Hider {  // class that covers desktop w/ pictures of desktop- invoked by n
                 }
             }
         }
-        //print("number of nscreens:\(myScreen.count), desktops:\(myScreen.mapValues({$0.count}))")
+        //print("number of myScreen:\(myScreen.count), desktops:\(myScreen.mapValues({$0.count}))")
         return
     }
     
