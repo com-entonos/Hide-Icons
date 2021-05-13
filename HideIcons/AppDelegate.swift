@@ -144,8 +144,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     // say "Hi"
     @objc func donateClicked(_ sender: Any?) {
-        NSWorkspace.shared.open(URL(string: "https://entonos.com/index.php/the-geek-shop/")!) // NO via Apple because of paypal donate link. apple's math is about as good as their physics engine (i.e. 30% of 0 is still 0)
-        //NSWorkspace.shared.open(URL(string: "https://entonos.com/")!)
+        //NSWorkspace.shared.open(URL(string: "https://entonos.com/index.php/the-geek-shop/")!) // NO via Apple because of paypal donate link. apple's math is about as good as their physics engine (i.e. 30% of 0 is still 0)
+        NSWorkspace.shared.open(URL(string: "https://entonos.com/")!)
     }
     
     @objc func about(_ sender: Any?) {
