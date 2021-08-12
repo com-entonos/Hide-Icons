@@ -35,6 +35,7 @@ class Hider {  // class that covers desktop w/ pictures of desktop- invoked by n
             if showing { // if this is currently showing, bring to front and pin it to this Space
                 self.orderFront(nil)
                 self.collectionBehavior = .stationary
+                self.animationBehavior = .none
             }
             if !hidden { self.orderOut(nil) }  // showing desktop, don't show this window at all
         }
@@ -142,7 +143,8 @@ class Hider {  // class that covers desktop w/ pictures of desktop- invoked by n
         win.ignoresMouseEvents = true
         win.orderBack(nil)  // critical we place on back
         win.isRestorable = false
-        win.animationBehavior = .none
+        //win.animationBehavior = .none
+        win.animationBehavior = .default
         return win
     }
 }
