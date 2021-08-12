@@ -36,7 +36,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         
         // restore user preferences
-        let noSBI = setDefaultValues()
+        var noSBI = false
+        if !NSEvent.modifierFlags.contains(.command) { noSBI = setDefaultValues() }
         
         // construct status bar item (or not!)
         if noSBI { statusBarItem = nil } else {
@@ -148,7 +149,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         statusBarItem?.button?.image = sbiHidden ? sbiPicture : sbiNoPicture
         sbiHidden = !sbiHidden
         UserDefaults.standard.set(sbiHidden, forKey: "sbiHidden") // save choice
-        UserDefaults.standard.set(false, forKey: "noSBI") // clear noSBI
+        //UserDefaults.standard.set(false, forKey: "noSBI") // clear noSBI
     }
     // called when switching left & right clicks
     @objc func rightClicked(_ sender: Any?) {
@@ -158,7 +159,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     
     @objc func removeMenu(_ sender: Any?) {
         statusBarItem = nil
-        UserDefaults.standard.set(true, forKey: "noSBI") // save choice
+        //UserDefaults.standard.set(true, forKey: "noSBI") // save choice
     }
     
     @objc func getHelp(_ sender: Any?) {
@@ -179,7 +180,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func setDefaultValues() -> Bool {
         defaultClick = ( UserDefaults.standard.object(forKey: "defaultClick") == nil) ? true : UserDefaults.standard.bool(forKey: "defaultClick")
         sbiHidden = ( UserDefaults.standard.object(forKey: "sbiHidden") == nil) ? false : UserDefaults.standard.bool(forKey: "sbiHidden")
-        return( UserDefaults.standard.object(forKey: "noSBI") == nil) ? false : UserDefaults.standard.bool(forKey: "noSBI")  // do we not show the status bar item?
+        return false
+        //return( UserDefaults.standard.object(forKey: "noSBI") == nil) ? false : UserDefaults.standard.bool(forKey: "noSBI")  // do we construct the status bar item?
     }
 }
 
