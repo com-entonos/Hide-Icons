@@ -9,31 +9,40 @@ import Cocoa
 
 //@NSApplicationMain // for older versions of xcode
 @main
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
-    // create menu item on menu bar
-    var statusItem: NSStatusItem? = NSStatusBar.system.statusItem(withLength:NSStatusItem.squareLength)
+    // create status bar item on menu bar
+    var statusBarItem: NSStatusItem?
     
     // Hider class which hides/shows icons
     let hider = Hider()
     
     // menu picture or not
-    let menuPicture = NSImage(named: "BBarButtonImage")
-    let menuNoPicture = NSImage(named: "AlphaBarButtonImage")
+    let sbiPicture = NSImage(named: "BBarButtonImage")
+    let sbiNoPicture = NSImage(named: "AlphaBarButtonImage")
     
     // to figure out if Services started the app
     var startDate: Date!
     
     // start out w/ menu item visible
-    var menuHidden = false
+    var sbiHidden = false
+    
+    // show menu on left click?
+    var defaultClick = true
     
     // Apple doc
     var observation: NSKeyValueObservation?
     
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         
+        defaultClick = ( UserDefaults.standard.object(forKey: "defaultClick") == nil) ? true : UserDefaults.standard.bool(forKey: "defaultClick")
+        sbiHidden = ( UserDefaults.standard.object(forKey: "sbiHidden") == nil) ? false : UserDefaults.standard.bool(forKey: "sbiHidden")
+        let removeMenu = ( UserDefaults.standard.object(forKey: "removeMenu") == nil) ? false : UserDefaults.standard.bool(forKey: "removeMenu")
+        
         // assign image to menu item
-        statusItem?.button?.image = menuPicture
+        if removeMenu { statusBarItem = nil } else {
+            statusBarItem = setStatusBarItem(image: sbiHidden ? sbiNoPicture : sbiPicture)
+        }
         
         // let's go hide icons
         
@@ -59,15 +68,31 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
     }
 
+    @objc func statusBarButtonClicked(sender: NSStatusBarButton) {
+        let rightClick = NSApp.currentEvent!.isRightClick
+        print("rightClick: \(rightClick)   defaultClick: \(defaultClick)")
+        if rightClick == defaultClick {
+            print("toggle!")
+            toggle(nil)
+        } else {
+            print("show menu!")
+            statusBarItem!.menu = constructMenu(hider.hidden)
+            statusBarItem!.button!.performClick(nil)
+        }
+    }
+    
+    @objc func menuDidClose(_ menu: NSMenu) {
+        statusBarItem?.menu = nil
+    }
+    
     func applicationWillTerminate(_ aNotification: Notification) {
         // Insert code here to tear down your application
     }
     
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        if statusItem == nil || menuHidden {
-            if statusItem == nil { statusItem = NSStatusBar.system.statusItem(withLength:NSStatusItem.squareLength) }
-            menuHidden = true
-            menuPic(nil)
+        if statusBarItem == nil || sbiHidden {
+            if statusBarItem == nil { statusBarItem = setStatusBarItem(image: sbiPicture) }
+            sbiHidden = false
         }
         return false
     }
@@ -77,61 +102,76 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if Date() > startDate { //hack to see if Service started the app, if so don't toggle since we are already hiding icons
             toggle(nil)
         } else {
-            statusItem = nil // otherwise just turn off menu
+            statusBarItem = nil // Services did start the app; just turn off menu
         }
     }
     
-    // called when menu item should be hidden or shown
-    @objc func menuPic(_ sender: Any?) {
-        if menuHidden {
-            statusItem?.button?.image = menuPicture
-        } else {
-            statusItem?.button?.image = menuNoPicture
-        }
-        menuHidden = !menuHidden
-        constructMenu(hider.hidden)
-    }
-    
-    // called when icons should hidden or shown
-    @objc func toggle(_ sender: Any?) {
-        constructMenu(!hider.hidden)
-        NotificationCenter.default.post(name: .doHide, object: nil)
+    // construct status bar item
+    func setStatusBarItem(image: NSImage? ) -> NSStatusItem? {
+        let sBI = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        sBI.button?.image = image
+        sBI.button?.action = #selector(self.statusBarButtonClicked(sender:))
+        sBI.button?.sendAction(on: [.leftMouseDown, .rightMouseDown])
+        return sBI
     }
     
     // construct our menu item list of options
-    func constructMenu(_ hidden : Bool) {
-        if let sItem = statusItem {
-            let menu = NSMenu()
+    func constructMenu(_ hidden : Bool) -> NSMenu? {
+        if statusBarItem == nil { return nil } //never happens?
+        
+        let menu = NSMenu()
+        menu.delegate = self
 
-            // Show/Hide Desktop Icons
-            var str = hidden ? "Show Desktop Icons" : "Hide Desktop Icons"
-            menu.addItem(NSMenuItem(title: str, action: #selector(self.toggle(_:)), keyEquivalent: ""))
- 
-            menu.addItem(NSMenuItem.separator())
-            
-            // menu > submenu of Show/Hide or Remove remove
-            let subMenu = NSMenu()
-            
-            let menuItem = NSMenuItem()
-            menuItem.title = "Change menu"
-            menu.addItem(menuItem)
-            str = menuHidden ? "Show menu" : "Hide menu"
-            subMenu.addItem(NSMenuItem(title: str, action: #selector(self.menuPic(_:)), keyEquivalent: ""))
-            subMenu.addItem(NSMenuItem(title: "Remove menu", action: #selector(self.removeMenu(_:)), keyEquivalent: ""))
-            menu.setSubmenu(subMenu, for: menuItem)
-            
-            menu.addItem(NSMenuItem.separator())
-            menu.addItem(NSMenuItem(title: "Help", action: #selector(AppDelegate.getHelp(_:)), keyEquivalent: ""))
-            menu.addItem(NSMenuItem(title: "About", action: #selector(AppDelegate.about(_:)), keyEquivalent: ""))
-            menu.addItem(NSMenuItem(title: "Say \"Hi\" to entonos", action: #selector(AppDelegate.donateClicked(_:)), keyEquivalent: ""))
-            
-            menu.addItem(NSMenuItem.separator())
-            menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: ""))
+        // Show/Hide Desktop Icons
+        var str = hidden ? "Show Desktop Icons" : "Hide Desktop Icons"
+        menu.addItem(NSMenuItem(title: str, action: #selector(self.toggle(_:)), keyEquivalent: ""))
+        
+        menu.addItem(NSMenuItem.separator())
 
-            sItem.menu = menu
-        }
+        // response to right/left click
+        let menuClick = NSMenuItem(title: "Right-click to show menu", action: #selector(self.rightClicked(_:)), keyEquivalent: "")
+        menuClick.state = defaultClick ? NSControl.StateValue.off : NSControl.StateValue.on
+        menu.addItem(menuClick)
+        
+        // menu > submenu of Show/Hide or Remove remove
+        let subMenu = NSMenu()
+        
+        let menuItem = NSMenuItem() // Change menu > Hid/Show or Remove menu
+        menuItem.title = "Change menu"
+        menu.addItem(menuItem)
+        str = sbiHidden ? "Show menu" : "Hide menu"
+        subMenu.addItem(NSMenuItem(title: str, action: #selector(self.sbiPic(_:)), keyEquivalent: ""))
+        subMenu.addItem(NSMenuItem(title: "Remove menu", action: #selector(self.removeMenu(_:)), keyEquivalent: ""))
+        menu.setSubmenu(subMenu, for: menuItem)
+        
+        menu.addItem(NSMenuItem.separator())
+        menu.addItem(NSMenuItem(title: "Help", action: #selector(AppDelegate.getHelp(_:)), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "About", action: #selector(AppDelegate.about(_:)), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "Say \"Hi\" to entonos", action: #selector(AppDelegate.donateClicked(_:)), keyEquivalent: ""))
+        
+        menu.addItem(NSMenuItem.separator())
+        menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: ""))
+
+        return menu
       
     }
+    // called when icons should hidden or shown
+    @objc func toggle(_ sender: Any?) {
+        NotificationCenter.default.post(name: .doHide, object: nil)
+    }
+    // called when menu item should be hidden or shown
+    @objc func sbiPic(_ sender: Any?) {
+        statusBarItem?.button?.image = sbiHidden ? sbiPicture : sbiNoPicture
+        sbiHidden = !sbiHidden
+        UserDefaults.standard.set(sbiHidden, forKey: "sbiHidden")
+        UserDefaults.standard.set(false, forKey: "removeMenu")
+    }
+    // called when switching left & right clicks
+    @objc func rightClicked(_ sender: Any?) {
+        defaultClick = !defaultClick
+        UserDefaults.standard.set(defaultClick, forKey: "defaultClick")
+    }
+    
     @objc func getHelp(_ sender: Any?) {
         if let book = Bundle.main.object(forInfoDictionaryKey: "CFBundleHelpBookName") as? NSHelpManager.BookName {
             NSHelpManager.shared.openHelpAnchor("Welcome", inBook: book)
@@ -139,7 +179,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     @objc func removeMenu(_ sender: Any?) {
-        statusItem = nil
+        statusBarItem = nil
+        UserDefaults.standard.set(true, forKey: "removeMenu")
     }
 
     // say "Hi"
@@ -149,10 +190,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     @objc func about(_ sender: Any?) {
-        //let opts = [ NSApplication.AboutPanelOptionKey : Any?]()
-        //NSApplication.shared.orderFrontStandardAboutPanel(opts)
-        
         NSApplication.shared.orderFrontStandardAboutPanel(nil)
     }
 }
 
+extension NSEvent {
+    var isRightClick: Bool {
+        let rightClick = (self.type == .rightMouseDown)
+        let controlClick = self.modifierFlags.contains(.control)
+        return rightClick || controlClick
+    }
+}
