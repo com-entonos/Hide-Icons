@@ -11,20 +11,20 @@ import Cocoa
 @main
 class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
-    // create status bar item on menu bar
+    // status bar item
     var statusBarItem: NSStatusItem?
     
     // Hider class which hides/shows icons
     let hider = Hider()
     
-    // menu picture or not
+    // status bar item images
     let sbiPicture = NSImage(named: "BBarButtonImage")
     let sbiNoPicture = NSImage(named: "AlphaBarButtonImage")
     
     // to figure out if Services started the app
     var startDate: Date!
     
-    // start out w/ menu item visible
+    // start out w/ status bar item visible
     var sbiHidden = false
     
     // show menu on left click?
@@ -35,16 +35,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         
-        defaultClick = ( UserDefaults.standard.object(forKey: "defaultClick") == nil) ? true : UserDefaults.standard.bool(forKey: "defaultClick")
-        sbiHidden = ( UserDefaults.standard.object(forKey: "sbiHidden") == nil) ? false : UserDefaults.standard.bool(forKey: "sbiHidden")
-        let removeMenu = ( UserDefaults.standard.object(forKey: "removeMenu") == nil) ? false : UserDefaults.standard.bool(forKey: "removeMenu")
+        // restore user preferences
+        let noSBI = setDefaultValues()
         
-        // assign image to menu item
-        if removeMenu { statusBarItem = nil } else {
+        // construct status bar item (or not!)
+        if noSBI { statusBarItem = nil } else {
             statusBarItem = setStatusBarItem(image: sbiHidden ? sbiNoPicture : sbiPicture)
         }
-        
-        // let's go hide icons
         
         // this should capture in/out of Dark Mode
         if #available(OSX 10.14, *) {
@@ -56,7 +53,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
         }
         
-        // let's go hide icons (in 1 second so we get out of this function so later versions of macOS are happy
+        // let's go hide icons (in 1 second so later versions of macOS are happy we are out of this function)
         Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false, block: { _ in self.toggle(nil)})
         
         // create some Services
@@ -65,24 +62,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         
         // date the app started + 2 second
         startDate = Date(timeIntervalSinceNow: TimeInterval(2.0))
-        
     }
-
-    @objc func statusBarButtonClicked(sender: NSStatusBarButton) {
-        let rightClick = NSApp.currentEvent!.isRightClick
-        print("rightClick: \(rightClick)   defaultClick: \(defaultClick)")
-        if rightClick == defaultClick {
-            print("toggle!")
+    // called from Services menu
+    @objc func toggleService(_ pboard: NSPasteboard, userData: String, error: NSErrorPointer) {
+        if Date() > startDate { //hack to see if Service started the app, if so don't toggle since we are already hiding icons
             toggle(nil)
         } else {
-            print("show menu!")
-            statusBarItem!.menu = constructMenu(hider.hidden)
-            statusBarItem!.button!.performClick(nil)
+            statusBarItem = nil // Services did start the app; just turn off menu
         }
-    }
-    
-    @objc func menuDidClose(_ menu: NSMenu) {
-        statusBarItem?.menu = nil
     }
     
     func applicationWillTerminate(_ aNotification: Notification) {
@@ -96,16 +83,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         return false
     }
-    
-    // called from Services menu
-    @objc func toggleService(_ pboard: NSPasteboard, userData: String, error: NSErrorPointer) {
-        if Date() > startDate { //hack to see if Service started the app, if so don't toggle since we are already hiding icons
-            toggle(nil)
-        } else {
-            statusBarItem = nil // Services did start the app; just turn off menu
-        }
-    }
-    
     // construct status bar item
     func setStatusBarItem(image: NSImage? ) -> NSStatusItem? {
         let sBI = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -114,11 +91,18 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         sBI.button?.sendAction(on: [.leftMouseDown, .rightMouseDown])
         return sBI
     }
+    // status bar item clicked- do we toggle or do we construct and show menu?
+    @objc func statusBarButtonClicked(sender: NSStatusBarButton) {
+        if NSApp.currentEvent!.isRightClick == defaultClick {
+            toggle(nil)
+        } else {
+            statusBarItem!.menu = constructMenu(hider.hidden)
+            statusBarItem!.button!.performClick(nil) // pass the click along
+        }
+    }
     
-    // construct our menu item list of options
+    // construct menu
     func constructMenu(_ hidden : Bool) -> NSMenu? {
-        if statusBarItem == nil { return nil } //never happens?
-        
         let menu = NSMenu()
         menu.delegate = self
 
@@ -127,15 +111,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(NSMenuItem(title: str, action: #selector(self.toggle(_:)), keyEquivalent: ""))
         
         menu.addItem(NSMenuItem.separator())
-
-        // response to right/left click
         let menuClick = NSMenuItem(title: "Right-click to show menu", action: #selector(self.rightClicked(_:)), keyEquivalent: "")
         menuClick.state = defaultClick ? NSControl.StateValue.off : NSControl.StateValue.on
         menu.addItem(menuClick)
         
         // menu > submenu of Show/Hide or Remove remove
         let subMenu = NSMenu()
-        
         let menuItem = NSMenuItem() // Change menu > Hid/Show or Remove menu
         menuItem.title = "Change menu"
         menu.addItem(menuItem)
@@ -153,23 +134,31 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: ""))
 
         return menu
-      
+    }
+    
+    @objc func menuDidClose(_ menu: NSMenu) { // teardown menu for next time SBI is clicked
+        statusBarItem?.menu = nil
     }
     // called when icons should hidden or shown
     @objc func toggle(_ sender: Any?) {
         NotificationCenter.default.post(name: .doHide, object: nil)
     }
-    // called when menu item should be hidden or shown
+    // called when status bar item should be hidden or shown
     @objc func sbiPic(_ sender: Any?) {
         statusBarItem?.button?.image = sbiHidden ? sbiPicture : sbiNoPicture
         sbiHidden = !sbiHidden
-        UserDefaults.standard.set(sbiHidden, forKey: "sbiHidden")
-        UserDefaults.standard.set(false, forKey: "removeMenu")
+        UserDefaults.standard.set(sbiHidden, forKey: "sbiHidden") // save choice
+        UserDefaults.standard.set(false, forKey: "noSBI") // clear noSBI
     }
     // called when switching left & right clicks
     @objc func rightClicked(_ sender: Any?) {
         defaultClick = !defaultClick
-        UserDefaults.standard.set(defaultClick, forKey: "defaultClick")
+        UserDefaults.standard.set(defaultClick, forKey: "defaultClick") // save choice
+    }
+    
+    @objc func removeMenu(_ sender: Any?) {
+        statusBarItem = nil
+        UserDefaults.standard.set(true, forKey: "noSBI") // save choice
     }
     
     @objc func getHelp(_ sender: Any?) {
@@ -177,12 +166,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             NSHelpManager.shared.openHelpAnchor("Welcome", inBook: book)
         }
     }
-    
-    @objc func removeMenu(_ sender: Any?) {
-        statusBarItem = nil
-        UserDefaults.standard.set(true, forKey: "removeMenu")
-    }
-
     // say "Hi"
     @objc func donateClicked(_ sender: Any?) {
         //NSWorkspace.shared.open(URL(string: "https://entonos.com/index.php/the-geek-shop/")!) // NO via Apple because of paypal donate link. apple's math is about as good as their physics engine (i.e. 30% of 0 is still 0)
@@ -192,12 +175,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc func about(_ sender: Any?) {
         NSApplication.shared.orderFrontStandardAboutPanel(nil)
     }
+    // read in user preferences
+    func setDefaultValues() -> Bool {
+        defaultClick = ( UserDefaults.standard.object(forKey: "defaultClick") == nil) ? true : UserDefaults.standard.bool(forKey: "defaultClick")
+        sbiHidden = ( UserDefaults.standard.object(forKey: "sbiHidden") == nil) ? false : UserDefaults.standard.bool(forKey: "sbiHidden")
+        return( UserDefaults.standard.object(forKey: "noSBI") == nil) ? false : UserDefaults.standard.bool(forKey: "noSBI")  // do we not show the status bar item?
+    }
 }
 
-extension NSEvent {
+extension NSEvent { // so .rightMouseDown does not capture control+.leftMouseDown; fix that.
     var isRightClick: Bool {
-        let rightClick = (self.type == .rightMouseDown)
-        let controlClick = self.modifierFlags.contains(.control)
-        return rightClick || controlClick
+        return (self.type == .rightMouseDown) || (self.type == .leftMouseDown && self.modifierFlags.contains(.control))
     }
 }
