@@ -89,6 +89,9 @@ class Hider {  // class that covers desktop w/ pictures of desktop- invoked by n
         
         let h0 = NSHeight((NSScreen.screens.filter({$0.frame.origin == CGPoint.zero}).first?.frame)!) // height of Screen that has menu bar
         
+        let awakeScreen = whichScreensAreAwake(h0)  // dictionary [NSScreen : Bool] of not isAsleep
+        if awakeScreen.allSatisfy({!$0.value}) { return } // are all screens sleeping? if so, just get out now
+
         // need to find Desktop windows...
         for window in (CGWindowListCopyWindowInfo(option, kCGNullWindowID) as! [[ String : Any]]).reversed() {  //    go through all windows (according to options)
 
@@ -110,23 +113,24 @@ class Hider {  // class that covers desktop w/ pictures of desktop- invoked by n
             
             //print("window:\(index) \"\(name)\" \(showing) \(rect) \(option)")
             for screen in NSScreen.screens { // loop over screens to find where these pictures go...
-                // find window for this screen
-                let cWin = myScreen[screen]?.filter({$0.cgID == index && $0.frame == screen.frame}).last
-                if cWin != nil {  // window exists, just update image and settings
-                    //print("  F>\(screen.frame) \(cWin?.cgID ?? 0) \(showing) \"\(NSWorkspace.shared.desktopImageURL(for: screen)!.lastPathComponent)\"")
-                    cWin?.setWin(imageView: imageView, showing: showing, hidden: hidden)
-                    break // found a screen, get out of screen loop
-                } else if rect == screen.frame {  // new window for this screen
-                    //print("  A>\"\(NSWorkspace.shared.desktopImageURL(for: screen)!.lastPathComponent)\" \(screen.frame) \(index) \(showing)")
-                    let win = createWin(rect, index)
-                    win.setWin(imageView: imageView, showing: showing, hidden: hidden)
-                    if myScreen[screen] == nil {  myScreen[screen] = [win] } else { myScreen[screen]!.append(win) } //?
-                    break // found a screen, get out of screen loop
+                if awakeScreen[screen] ?? false {  // for screens not IsAsleep
+                    // find window for this screen
+                    let cWin = myScreen[screen]?.filter({$0.cgID == index && $0.frame == screen.frame}).last
+                    if cWin != nil {  // window exists, just update image and settings
+                        //print("  F>\(screen.frame) \(cWin?.cgID ?? 0) \(showing) \"\(NSWorkspace.shared.desktopImageURL(for: screen)!.lastPathComponent)\"")
+                        cWin?.setWin(imageView: imageView, showing: showing, hidden: hidden)
+                        break // found a screen, get out of screen loop
+                    } else if rect == screen.frame {  // new window for this screen
+                        //print("  A>\"\(NSWorkspace.shared.desktopImageURL(for: screen)!.lastPathComponent)\" \(screen.frame) \(index) \(showing)")
+                        let win = createWin(rect, index)
+                        win.setWin(imageView: imageView, showing: showing, hidden: hidden)
+                        if myScreen[screen] == nil {  myScreen[screen] = [win] } else { myScreen[screen]!.append(win) } //?
+                        break // found a screen, get out of screen loop
+                    }
                 }
             }
         }
         //print("number of myScreen:\(myScreen.count), desktops:\(myScreen.mapValues({$0.count}))")
-        return
     }
     
     func createWin(_ frame : CGRect,_ index: CGWindowID) -> MyWindow {
@@ -146,6 +150,25 @@ class Hider {  // class that covers desktop w/ pictures of desktop- invoked by n
         //win.animationBehavior = .none
         win.animationBehavior = .default
         return win
+    }
+    
+    func whichScreensAreAwake(_ h0: CGFloat) -> [ NSScreen : Bool] {  // return dictionary of [NSScreen : Bool] if not isAsleep
+        var displayCount : UInt32 = 0
+        CGGetOnlineDisplayList(0, nil, &displayCount) // find the number of displays according to Core Graphics
+        
+        let maxDisplay : UInt32 = displayCount
+        var onlineDisplays = [CGDirectDisplayID](repeating: 0, count: Int(displayCount))
+        CGGetOnlineDisplayList(maxDisplay, &onlineDisplays, &displayCount) // get a list of displays from Core Graphics
+
+        var screenAwake = [NSScreen : Bool]() // dictionary to tell if NSScreen is awake
+        for screen in NSScreen.screens {      // loop through NSScreen
+            let screenFrame = CGRect(origin: CGPoint(x: screen.frame.origin.x, y: h0 - screen.frame.origin.y - screen.frame.height), size: screen.frame.size) // shift NSScreen.frame CGRect to CG coordinates
+            if let displayIndex = onlineDisplays.firstIndex(where: {CGDisplayBounds($0) == screenFrame}) {
+                screenAwake[screen] = CGDisplayIsAsleep(onlineDisplays[displayIndex]) == 0 // is it not isAsleep?
+            }
+        }
+        //print("screenAwake = \(screenAwake)")
+        return screenAwake
     }
 }
 
