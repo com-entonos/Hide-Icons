@@ -54,15 +54,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
         }
         
-        // let's go hide icons (in 1 second so later versions of macOS are happy we are out of this function)
-        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false, block: { _ in self.toggle(nil)})
-        
         // create some Services
         NSApp.servicesProvider = self
         NSUpdateDynamicServices()
         
         // date the app started + 2 second
         startDate = Date(timeIntervalSinceNow: TimeInterval(2.0))
+        
+        // let's go hide icons (in 1 second so later versions of macOS are happy we are out of this function)
+        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false, block: { _ in self.toggle(nil)})
     }
     // called from Services menu
     @objc func toggleService(_ pboard: NSPasteboard, userData: String, error: NSErrorPointer) {
@@ -101,7 +101,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             statusBarItem!.button!.performClick(nil) // pass the click along
         }
     }
-    
     // construct menu
     func constructMenu(_ hidden : Bool) -> NSMenu? {
         let menu = NSMenu()
@@ -112,6 +111,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(NSMenuItem(title: str, action: #selector(self.toggle(_:)), keyEquivalent: ""))
         
         menu.addItem(NSMenuItem.separator())
+        
+        menu.addItem(NSMenuItem(title: "Refresh Desktop", action: #selector(self.forceRefresh(_:)), keyEquivalent: ""))
+        
         let menuClick = NSMenuItem(title: "Right-click to show menu", action: #selector(self.rightClicked(_:)), keyEquivalent: "")
         menuClick.state = defaultClick ? NSControl.StateValue.off : NSControl.StateValue.on
         menu.addItem(menuClick)
@@ -136,7 +138,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         return menu
     }
-    
+    @objc func forceRefresh(_ sender: Any?) {
+        hider.makeWindows()
+    }
     @objc func menuDidClose(_ menu: NSMenu) { // teardown menu for next time SBI is clicked
         statusBarItem?.menu = nil
     }
