@@ -30,6 +30,8 @@ class Hider {  // class that covers desktop w/ pictures of desktop- invoked by n
         NSWorkspace.shared.notificationCenter.removeObserver(self, name: NSWorkspace.activeSpaceDidChangeNotification, object: nil)
         NotificationCenter.default.removeObserver(self, name: NSApplication.didChangeScreenParametersNotification, object: nil)
         NotificationCenter.default.removeObserver(self, name: .refreshDesktop, object: nil)
+        BGTimer?.invalidate()
+        myScreen = [NSScreen : [MyWindow]]()
     }
     
     class MyWindow : NSWindow { // just add some data and methods for NSWindow- this will hold a window w/ a Desktop pic
