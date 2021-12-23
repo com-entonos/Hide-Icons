@@ -33,8 +33,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     // Apple doc
     var observation: NSKeyValueObservation?
     
-    let defaultTimeList = ["Never", "1 second", "5 seconds", "30 seconds", "1 minute", "5 minutes", "15 minutes", "1 hour"]
-    let defaultTimes = [315576000.0, 1.0, 5.0, 30.0, 60.0, 300.0, 900.0, 3600.0]
+    let defaultTimeList = ["Never", "5 seconds", "30 seconds", "1 minute", "5 minutes", "15 minutes", "1 hour"]
+    let defaultTimes = [315576000.0, 5.0, 30.0, 60.0, 300.0, 900.0, 3600.0]
     var defaultTime = "Never"
     
     func applicationDidFinishLaunching(_ aNotification: Notification) {
