@@ -15,7 +15,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var statusBarItem: NSStatusItem?
     
     // Hider class which hides/shows icons
-    let hider = Hider()
+    var hider: Hider? = Hider()
     
     // status bar item images
     let sbiPicture = NSImage(named: "BBarButtonImage")
@@ -33,11 +33,20 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     // Apple doc
     var observation: NSKeyValueObservation?
     
+    let defaultTimeList = ["Never", "1 second", "5 seconds", "30 seconds", "1 minute", "5 minutes", "15 minutes", "1 hour"]
+    let defaultTimes = [315576000.0, 1.0, 5.0, 30.0, 60.0, 300.0, 900.0, 3600.0]
+    var defaultTime = "Never"
+    
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         
         // restore user preferences
         var noSBI = false
         if !NSEvent.modifierFlags.contains(.command) { noSBI = setDefaultValues() }
+        else { // reset to defaults
+            UserDefaults.standard.set(defaultTime, forKey: "defaultTime")
+            UserDefaults.standard.set(sbiHidden, forKey: "sbiHidden")
+            UserDefaults.standard.set(defaultClick, forKey: "defaultClick")
+        }
         
         // construct status bar item (or not!)
         if noSBI { statusBarItem = nil } else {
@@ -47,9 +56,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // this should capture in/out of Dark Mode
         if #available(OSX 10.14, *) {
             observation = NSApp.observe(\.effectiveAppearance) { (app, _) in
-                if self.hider.hidden { // give 3 second delay to make sure the Desktop did in fact update
+                if self.hider!.hidden { // give 3 second delay to make sure the Desktop did in fact update
                     Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false, block: { _ in
-                                            NotificationCenter.default.post(name: .spaceChange, object: nil) })
+                        NotificationCenter.default.post(name: .refreshDesktop, object: nil) })
                 }
             }
         }
@@ -62,6 +71,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         startDate = Date(timeIntervalSinceNow: TimeInterval(2.0))
         
         // let's go hide icons (in 1 second so later versions of macOS are happy we are out of this function)
+        NotificationCenter.default.post(name: .timeBG, object: defaultTimes[defaultTimeList.firstIndex(where: {$0 == defaultTime}) ?? 0])
         Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false, block: { _ in self.toggle(nil)})
     }
     // called from Services menu
@@ -74,7 +84,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
     
     func applicationWillTerminate(_ aNotification: Notification) {
-        // Insert code here to tear down your application
+        observation = nil; hider = nil // remove observers
     }
     
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
@@ -97,7 +107,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if NSApp.currentEvent!.isRightClick == defaultClick {
             toggle(nil)
         } else {
-            statusBarItem!.menu = constructMenu(hider.hidden)
+            statusBarItem!.menu = constructMenu(hider!.hidden)
             statusBarItem!.button!.performClick(nil) // pass the click along
         }
     }
@@ -112,12 +122,24 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         
         menu.addItem(NSMenuItem.separator())
         
-        menu.addItem(NSMenuItem(title: "Refresh Desktop", action: #selector(self.forceRefresh(_:)), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "Refresh Desktop", action: #selector(self.refreshDesktops(_:)), keyEquivalent: ""))
+        
+        // menu > submenu of Show/Hide or Remove remove
+        let timeSubMenu = NSMenu()
+        let timeMenuItem = NSMenuItem() // Change menu > Hid/Show or Remove menu
+        timeMenuItem.title = "Check for changing Desktop"
+        menu.addItem(timeMenuItem)
+        for time in defaultTimeList {
+            let timeMI = NSMenuItem(title: time, action: #selector(self.selectTime(_:)), keyEquivalent: "")
+            timeMI.state = defaultTime == time ? NSControl.StateValue.on : NSControl.StateValue.off
+            timeSubMenu.addItem(timeMI)
+        }
+        menu.setSubmenu(timeSubMenu, for: timeMenuItem)
         
         let menuClick = NSMenuItem(title: "Right-click to show menu", action: #selector(self.rightClicked(_:)), keyEquivalent: "")
         menuClick.state = defaultClick ? NSControl.StateValue.off : NSControl.StateValue.on
         menu.addItem(menuClick)
-        
+
         // menu > submenu of Show/Hide or Remove remove
         let subMenu = NSMenu()
         let menuItem = NSMenuItem() // Change menu > Hid/Show or Remove menu
@@ -129,17 +151,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.setSubmenu(subMenu, for: menuItem)
         
         menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "Help", action: #selector(AppDelegate.getHelp(_:)), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "About", action: #selector(AppDelegate.about(_:)), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "Say \"Hi\" to entonos", action: #selector(AppDelegate.donateClicked(_:)), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "Help", action: #selector(self.getHelp(_:)), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "About", action: #selector(self.about(_:)), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "Say \"Hi\" to entonos", action: #selector(self.donateClicked(_:)), keyEquivalent: ""))
         
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: ""))
 
         return menu
     }
-    @objc func forceRefresh(_ sender: Any?) {
-        hider.makeWindows()
+    @objc func refreshDesktops(_ sender: Any?) {
+        NotificationCenter.default.post(name: .refreshDesktop, object: nil)
     }
     @objc func menuDidClose(_ menu: NSMenu) { // teardown menu for next time SBI is clicked
         statusBarItem?.menu = nil
@@ -147,6 +169,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     // called when icons should hidden or shown
     @objc func toggle(_ sender: Any?) {
         NotificationCenter.default.post(name: .doHide, object: nil)
+    }
+    // check for changing Desktop how often? default is never
+    @objc func selectTime(_ menu: NSMenuItem) {
+        defaultTime = menu.title
+        NotificationCenter.default.post(name: .timeBG, object: defaultTimes[defaultTimeList.firstIndex(where: {$0 == defaultTime}) ?? 0])
+        UserDefaults.standard.set(defaultTime, forKey: "defaultTime")
     }
     // called when status bar item should be hidden or shown
     @objc func sbiPic(_ sender: Any?) {
@@ -182,8 +210,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
     // read in user preferences
     func setDefaultValues() -> Bool {
-        defaultClick = ( UserDefaults.standard.object(forKey: "defaultClick") == nil) ? true : UserDefaults.standard.bool(forKey: "defaultClick")
-        sbiHidden = ( UserDefaults.standard.object(forKey: "sbiHidden") == nil) ? false : UserDefaults.standard.bool(forKey: "sbiHidden")
+        defaultClick = ( UserDefaults.standard.object(forKey: "defaultClick") == nil) ? defaultClick : UserDefaults.standard.bool(forKey: "defaultClick")
+        sbiHidden = ( UserDefaults.standard.object(forKey: "sbiHidden") == nil) ? sbiHidden : UserDefaults.standard.bool(forKey: "sbiHidden")
+        defaultTime = (( UserDefaults.standard.object(forKey: "defaultTime") == nil) ? defaultTime : UserDefaults.standard.string(forKey: "defaultTime")) ?? defaultTime
+        defaultTime = defaultTimeList[defaultTimeList.firstIndex(where: {$0 == defaultTime}) ?? 0] // make sure defaultTime is a valid string
         return false
         //return( UserDefaults.standard.object(forKey: "noSBI") == nil) ? false : UserDefaults.standard.bool(forKey: "noSBI")  // do we construct the status bar item?
     }
