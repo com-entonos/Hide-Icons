@@ -15,25 +15,6 @@ extension Notification.Name {
 
 class Hider {  // class that covers desktop w/ pictures of desktop- invoked by notifications and/or timers
     
-    init() {  // set up observers and initial window lists for each screen
-        NotificationCenter.default.addObserver(self, selector: #selector(self.doHide(_:)), name: .doHide, object: nil) // catch toggle
-        NotificationCenter.default.addObserver(self, selector: #selector(self.timerChanged(_:)), name: .timeBG, object: nil) // catch background timer interval
-        makeWindows() // go grab all the Desktops
-        NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(self.screenChanged(_:)), name: NSWorkspace.activeSpaceDidChangeNotification, object: nil) // Space changes
-        NotificationCenter.default.addObserver(self, selector: #selector(self.refreshAll(_:)), name: NSApplication.didChangeScreenParametersNotification, object: nil) // Screens change
-        NotificationCenter.default.addObserver(self, selector: #selector(self.refreshAll(_:)), name: .refreshDesktop, object: nil)
-    }
-    
-    deinit {  // tear down observers (is this really necessary?)
-        NotificationCenter.default.removeObserver(self, name: .doHide, object: nil)
-        NotificationCenter.default.removeObserver(self, name: .timeBG, object: nil)
-        NSWorkspace.shared.notificationCenter.removeObserver(self, name: NSWorkspace.activeSpaceDidChangeNotification, object: nil)
-        NotificationCenter.default.removeObserver(self, name: NSApplication.didChangeScreenParametersNotification, object: nil)
-        NotificationCenter.default.removeObserver(self, name: .refreshDesktop, object: nil)
-        BGTimer?.invalidate()
-        myScreen = [NSScreen : [MyWindow]]()
-    }
-    
     class MyWindow : NSWindow { // just add some data and methods for NSWindow- this will hold a window w/ a Desktop pic
         var cgID: CGWindowID  // CG window ID of a Desktop
         
@@ -97,7 +78,7 @@ class Hider {  // class that covers desktop w/ pictures of desktop- invoked by n
     func doTimer() { //print("in doTimer \(BGTime)")
         BGTimer?.invalidate()
         if BGTime < 720000.0 { //print("  starting timer...")
-            BGTimer = Timer.scheduledTimer(withTimeInterval: BGTime, repeats: true, block: { _ in self.refreshAll(nil)})
+            BGTimer = Timer.scheduledTimer(withTimeInterval: BGTime, repeats: true, block: { _ in self.makeWindows(.optionOnScreenOnly)})
         }
     }
     
@@ -110,10 +91,10 @@ class Hider {  // class that covers desktop w/ pictures of desktop- invoked by n
     }
 
     @objc func refreshAll(_ notifier : Any?) { // update everything (including stuff not visible)
-        makeWindows()
+        BGTimer?.invalidate(); makeWindows(); doTimer()
     }
     @objc func screenChanged(_ notifier : Any?) {  // update only windows visible
-        makeWindows(.optionOnScreenOnly)
+        BGTimer?.invalidate(); makeWindows(.optionOnScreenOnly); doTimer()
     }
     
     func makeWindows(_ option: CGWindowListOption = .optionAll){  // make window for each desktop
@@ -183,6 +164,25 @@ class Hider {  // class that covers desktop w/ pictures of desktop- invoked by n
         }
         //print("screenAwake = \(screenAwake)")
         return screenAwake
+    }
+    
+    init() {  // set up observers and initial window lists for each screen
+        NotificationCenter.default.addObserver(self, selector: #selector(self.doHide(_:)), name: .doHide, object: nil) // catch toggle
+        NotificationCenter.default.addObserver(self, selector: #selector(self.timerChanged(_:)), name: .timeBG, object: nil) // catch background timer interval
+        makeWindows() // go grab all the Desktops
+        NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(self.screenChanged(_:)), name: NSWorkspace.activeSpaceDidChangeNotification, object: nil) // Space changes
+        NotificationCenter.default.addObserver(self, selector: #selector(self.refreshAll(_:)), name: NSApplication.didChangeScreenParametersNotification, object: nil) // Screens change
+        NotificationCenter.default.addObserver(self, selector: #selector(self.refreshAll(_:)), name: .refreshDesktop, object: nil)
+    }
+    
+    deinit {  // tear down observers (is this really necessary?)
+        NotificationCenter.default.removeObserver(self, name: .doHide, object: nil)
+        NotificationCenter.default.removeObserver(self, name: .timeBG, object: nil)
+        NSWorkspace.shared.notificationCenter.removeObserver(self, name: NSWorkspace.activeSpaceDidChangeNotification, object: nil)
+        NotificationCenter.default.removeObserver(self, name: NSApplication.didChangeScreenParametersNotification, object: nil)
+        NotificationCenter.default.removeObserver(self, name: .refreshDesktop, object: nil)
+        BGTimer?.invalidate() // invalidate any background timers
+        myScreen = [:] // and free up screen/window dictionary
     }
 }
 
