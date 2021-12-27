@@ -34,8 +34,6 @@
 	<real>0.0</real>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2021 G.J. Parker (entonos)</string>
-	<key>NSMainStoryboardFile</key>
-	<string>Main</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<key>NSServices</key>

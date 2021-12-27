@@ -7,17 +7,17 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		2C24C152277A508500F21431 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C24C151277A508500F21431 /* main.swift */; };
 		2C5E23BC26365265008D27BE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C5E23BB26365265008D27BE /* AppDelegate.swift */; };
-		2C5E23C326365269008D27BE /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 2C5E23C126365269008D27BE /* Main.storyboard */; };
 		2C5E23D126367747008D27BE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2C5E23D026367747008D27BE /* Assets.xcassets */; };
 		2C5E23DC2637814E008D27BE /* Hider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C5E23DB2637814E008D27BE /* Hider.swift */; };
 		2C5E23F4263A0052008D27BE /* HideIcons.help in Resources */ = {isa = PBXBuildFile; fileRef = 2C5E23F3263A0052008D27BE /* HideIcons.help */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		2C24C151277A508500F21431 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		2C5E23B826365265008D27BE /* Hide Icons.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Hide Icons.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		2C5E23BB26365265008D27BE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		2C5E23C226365269008D27BE /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		2C5E23C426365269008D27BE /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		2C5E23C526365269008D27BE /* HideIcons.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = HideIcons.entitlements; sourceTree = "<group>"; };
 		2C5E23D026367747008D27BE /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -58,8 +58,8 @@
 			children = (
 				2C5E23BB26365265008D27BE /* AppDelegate.swift */,
 				2C5E23DB2637814E008D27BE /* Hider.swift */,
+				2C24C151277A508500F21431 /* main.swift */,
 				2C5E23D026367747008D27BE /* Assets.xcassets */,
-				2C5E23C126365269008D27BE /* Main.storyboard */,
 				2C5E23C426365269008D27BE /* Info.plist */,
 				2C5E23C526365269008D27BE /* HideIcons.entitlements */,
 			);
@@ -125,7 +125,6 @@
 			files = (
 				2C5E23F4263A0052008D27BE /* HideIcons.help in Resources */,
 				2C5E23D126367747008D27BE /* Assets.xcassets in Resources */,
-				2C5E23C326365269008D27BE /* Main.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -138,21 +137,11 @@
 			files = (
 				2C5E23DC2637814E008D27BE /* Hider.swift in Sources */,
 				2C5E23BC26365265008D27BE /* AppDelegate.swift in Sources */,
+				2C24C152277A508500F21431 /* main.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXVariantGroup section */
-		2C5E23C126365269008D27BE /* Main.storyboard */ = {
-			isa = PBXVariantGroup;
-			children = (
-				2C5E23C226365269008D27BE /* Base */,
-			);
-			name = Main.storyboard;
-			sourceTree = "<group>";
-		};
-/* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
 		2C5E23C626365269008D27BE /* Debug */ = {

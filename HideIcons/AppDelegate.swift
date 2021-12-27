@@ -8,7 +8,7 @@
 import Cocoa
 
 //@NSApplicationMain // for older versions of xcode
-@main
+//@main
 class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     // status bar item
@@ -67,12 +67,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         NSApp.servicesProvider = self
         NSUpdateDynamicServices()
         
-        // date the app started + 2 second
-        startDate = Date(timeIntervalSinceNow: TimeInterval(2.0))
-        
         // let's go hide icons (in 1 second so later versions of macOS are happy we are out of this function)
         NotificationCenter.default.post(name: .timeBG, object: defaultTimes[defaultTimeList.firstIndex(where: {$0 == defaultTime}) ?? 0])
-        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false, block: { _ in self.toggle(nil)})
+        
+        // date the app started + 2 second
+        startDate = Date(timeIntervalSinceNow: TimeInterval(2.0))
     }
     // called from Services menu
     @objc func toggleService(_ pboard: NSPasteboard, userData: String, error: NSErrorPointer) {
@@ -181,7 +180,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         statusBarItem?.button?.image = sbiHidden ? sbiPicture : sbiNoPicture
         sbiHidden = !sbiHidden
         UserDefaults.standard.set(sbiHidden, forKey: "sbiHidden") // save choice
-        //UserDefaults.standard.set(false, forKey: "noSBI") // clear noSBI
     }
     // called when switching left & right clicks
     @objc func rightClicked(_ sender: Any?) {
@@ -191,7 +189,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     
     @objc func removeMenu(_ sender: Any?) {
         statusBarItem = nil
-        //UserDefaults.standard.set(true, forKey: "noSBI") // save choice
     }
     
     @objc func getHelp(_ sender: Any?) {
@@ -215,7 +212,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         defaultTime = (( UserDefaults.standard.object(forKey: "defaultTime") == nil) ? defaultTime : UserDefaults.standard.string(forKey: "defaultTime")) ?? defaultTime
         defaultTime = defaultTimeList[defaultTimeList.firstIndex(where: {$0 == defaultTime}) ?? 0] // make sure defaultTime is a valid string
         return false
-        //return( UserDefaults.standard.object(forKey: "noSBI") == nil) ? false : UserDefaults.standard.bool(forKey: "noSBI")  // do we construct the status bar item?
     }
 }
 
