@@ -67,7 +67,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         NSApp.servicesProvider = self
         NSUpdateDynamicServices()
         
-        // let's go hide icons (in 1 second so later versions of macOS are happy we are out of this function)
+        // let's go setup a background timer- lazy way to capture changing desktop backgrounds
         NotificationCenter.default.post(name: .timeBG, object: defaultTimes[defaultTimeList.firstIndex(where: {$0 == defaultTime}) ?? 0])
         
         // date the app started + 2 second
@@ -123,6 +123,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         
         menu.addItem(NSMenuItem(title: "Refresh Desktop", action: #selector(self.refreshDesktops(_:)), keyEquivalent: ""))
         
+        menu.addItem(NSMenuItem.separator())
+        
+        let menuClick = NSMenuItem(title: "Right-click to show menu", action: #selector(self.rightClicked(_:)), keyEquivalent: "")
+        menuClick.state = defaultClick ? NSControl.StateValue.off : NSControl.StateValue.on
+        menu.addItem(menuClick)
+        
         // menu > submenu of Show/Hide or Remove remove
         let timeSubMenu = NSMenu()
         let timeMenuItem = NSMenuItem() // Change menu > Hid/Show or Remove menu
@@ -134,10 +140,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             timeSubMenu.addItem(timeMI)
         }
         menu.setSubmenu(timeSubMenu, for: timeMenuItem)
-        
-        let menuClick = NSMenuItem(title: "Right-click to show menu", action: #selector(self.rightClicked(_:)), keyEquivalent: "")
-        menuClick.state = defaultClick ? NSControl.StateValue.off : NSControl.StateValue.on
-        menu.addItem(menuClick)
 
         // menu > submenu of Show/Hide or Remove remove
         let subMenu = NSMenu()
