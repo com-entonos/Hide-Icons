@@ -58,7 +58,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             observation = NSApp.observe(\.effectiveAppearance) { (app, _) in
                 if self.hider!.hidden { // give 3 second delay to make sure the Desktop did in fact update
                     Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false, block: { _ in
-                        NotificationCenter.default.post(name: .refreshDesktop, object: nil) })
+                        NotificationCenter.default.post(name: .updateDesktop, object: nil) })
                 }
             }
         }
