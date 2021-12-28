@@ -98,7 +98,7 @@ class Hider {  // class that covers desktop w/ pictures of desktop- invoked by n
     }
 
     @objc func updateWindows(_ notifier : Any?) {
-        if (notifier as? Notification)?.name == NSWorkspace.activeSpaceDidChangeNotification {usleep(75000)}
+        if (notifier as? Notification)?.name == NSWorkspace.activeSpaceDidChangeNotification {usleep(100_000)} //ugh! FIXME apple
         let h0 = NSHeight((NSScreen.screens.filter({$0.frame.origin == CGPoint.zero}).first?.frame)!) // height of Screen that has menu bar
         let awakeScreen = whichScreensAreAwake(h0)  // dictionary [NSScreen : Bool] of not isAsleep
         if awakeScreen.allSatisfy({!$0.value}) { return } // are all screens sleeping? if so, just get out now
@@ -145,7 +145,7 @@ class Hider {  // class that covers desktop w/ pictures of desktop- invoked by n
         
         // now create a CFArray with all the CGWindowID that are Desktop pictures
         let pointer = UnsafeMutablePointer<UnsafeRawPointer?>.allocate(capacity: desktopCGID.count)
-        for (index, win) in desktopCGID.enumerated() {
+        for (index, win) in desktopCGID.reversed().enumerated() {
             pointer[index] = UnsafeRawPointer(bitPattern: UInt(win))
         }
         deskCFArray = CFArrayCreate(kCFAllocatorDefault, pointer, desktopCGID.count, nil)  // there it is.
