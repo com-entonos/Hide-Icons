@@ -71,7 +71,7 @@ class Hider {  // class that covers desktop w/ pictures of desktop- invoked by n
                     else { win.orderBack(nil) }
                 }
             }
-            updateWindows(nil)
+            updateWindows(Notification(name: .updateDesktop, object: nil, userInfo: nil)) // force all Desktops to be updated
             doTimer()
         } else {
             // stop timer
@@ -98,7 +98,8 @@ class Hider {  // class that covers desktop w/ pictures of desktop- invoked by n
     }
 
     @objc func updateWindows(_ notifier : Any?) {
-        if (notifier as? Notification)?.name == NSWorkspace.activeSpaceDidChangeNotification {usleep(100_000)} //ugh! FIXME apple
+        if notifier != nil { usleep(100_000) }  //ugh! FIXME apple
+        let doAll = (notifier as? Notification)?.name == .updateDesktop
         let h0 = NSHeight((NSScreen.screens.filter({$0.frame.origin == CGPoint.zero}).first?.frame)!) // height of Screen that has menu bar
         let awakeScreen = whichScreensAreAwake(h0)  // dictionary [NSScreen : Bool] of not isAsleep
         if awakeScreen.allSatisfy({!$0.value}) { return } // are all screens sleeping? if so, just get out now
@@ -110,7 +111,7 @@ class Hider {  // class that covers desktop w/ pictures of desktop- invoked by n
                     let cgID = window.cgID
                     if let winCG = (CGWindowListCreateDescriptionFromArray(cgIDCFArray[cgID]) as! [[ String : AnyObject]]).last { // get CG window
                         let showing = winCG[kCGWindowIsOnscreen as String] as? Bool ?? false
-                        if showing { // only update image if we're showing
+                        if showing || doAll { // only update image if we're showing
                             guard let cgImage = CGWindowListCreateImage(.null, [.optionIncludingWindow], cgID, [.nominalResolution]) else { continue }
                             //print("  U>\(screen.frame) \(window.cgID) \(window.collectionBehavior == .stationary) \(cgImage)")
                             let image = NSImage(cgImage: cgImage, size: NSZeroSize)
