@@ -7,8 +7,6 @@
 
 import Cocoa
 
-//@NSApplicationMain // for older versions of xcode
-//@main
 class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     // status bar item
@@ -58,7 +56,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             observation = NSApp.observe(\.effectiveAppearance) { (app, _) in
                 if self.hider!.hidden { // give 3 second delay to make sure the Desktop did in fact update
                     Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false, block: { _ in
-                        NotificationCenter.default.post(name: .updateDesktop, object: nil) })
+                        print("effectiveAppearance triggered!")
+                        NotificationCenter.default.post(name: .updateAllDesktops, object: nil) })
                 }
             }
         }
@@ -162,7 +161,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         return menu
     }
     @objc func refreshDesktops(_ sender: Any?) {
-        NotificationCenter.default.post(name: .refreshDesktop, object: nil)
+        NotificationCenter.default.post(name: .createDesktops, object: nil)
     }
     @objc func menuDidClose(_ menu: NSMenu) { // teardown menu for next time SBI is clicked
         statusBarItem?.menu = nil
