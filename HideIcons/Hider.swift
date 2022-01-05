@@ -105,22 +105,21 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         
         BGTimer?.invalidate()                               // stop any timers
         for screen in NSScreen.screens {                    // for each screen
-            for window in myScreen[screen]! {               // for each screen, loop through windows (i.e. Spaces)
-                let cgID = window.cgID
-                if let winCG = (CGWindowListCreateDescriptionFromArray(cgIDCFArray[cgID]) as! [[ String : AnyObject]]).last { // get CG window
+            for window in myScreen[screen]! {               //   loop through windows (i.e. Spaces)
+                if let winCG = (CGWindowListCreateDescriptionFromArray(cgIDCFArray[window.cgID]) as! [[ String : AnyObject]]).last { // get CG window
                     let showing = winCG[kCGWindowIsOnscreen as String] as? Bool ?? false        // is it on screen?
                     if showing || doAll { // only update image if we're showing or if we were requested to do all
                         //print("  U>\(screen.frame) \(window.cgID) \(showing) \(window.collectionBehavior == .stationary) \(doAll) \(window.color)")
                         if window.color != nil {            // do we want the actual Desktop wallpaper?
                             window.setWin(imageView: nil, showing: showing, hidden: hidden)         // leave the solid color alone
                         } else {
-                            guard let cgImage = CGWindowListCreateImage(.null, [.optionIncludingWindow], cgID, [.nominalResolution]) else { continue }  // grab the picture
+                            guard let cgImage = CGWindowListCreateImage(.null, [.optionIncludingWindow], window.cgID, [.nominalResolution]) else { continue }  // grab the picture
                             let image = NSImage(cgImage: cgImage, size: NSZeroSize)
                             let imageView = NSImageView(image: image)
                             window.setWin(imageView: imageView, showing: showing, hidden: hidden)   // update the picture
                         }
                         //dbWin[screen]!.contentView = NSImageView(image: image)
-                        //dbSpace[cgID]?.contentView = NSImageView(image: image)
+                        //dbSpace[window.cgID]?.contentView = NSImageView(image: image)
                     }
                 }
             }
@@ -217,10 +216,9 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
     func desktopFromPoint(_ point : CGPoint, color : NSColor) -> (CGImage?, NSColor) {
         for screen in NSScreen.screens.filter({$0.frame.contains(point)}) {
             for win in myScreen[screen]! {
-                let cgID = win.cgID
-                if let winCG = (CGWindowListCreateDescriptionFromArray(cgIDCFArray[cgID]) as! [[ String : AnyObject]]).last { // get CG window
+                if let winCG = (CGWindowListCreateDescriptionFromArray(cgIDCFArray[win.cgID]) as! [[ String : AnyObject]]).last { // get CG window
                     if winCG[kCGWindowIsOnscreen as String] as? Bool ?? false {
-                        guard let cgImage = CGWindowListCreateImage(.null, [.optionIncludingWindow], cgID, [.nominalResolution]) else { continue }  // grab the picture
+                        guard let cgImage = CGWindowListCreateImage(.null, [.optionIncludingWindow], win.cgID, [.nominalResolution]) else { continue }  // grab the picture
                         return (cgImage, win.color ?? color)
                     }
                 }
@@ -231,13 +229,13 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
     // want solid color or actual wallpaper for Desktop
     @objc func desktopTypeChange(_ notifier: Notification) {
         screensAwake = true
+        BGTimer?.invalidate()
         let (color, desktop, mousePoint ) = notifier.object as? (NSColor, DesktopTypes, CGPoint) ?? (NSColor.black, .allDesktop, CGPoint.zero)
         switch desktop {
         case .solidColorDesktop, .desktop: // one Desktop is either getting a solid color or the actual Desktop
             for screen in NSScreen.screens.filter({$0.frame.contains(mousePoint)}) { // only if the mouse click was on this screen
                 for win in myScreen[screen]! {
-                    let cgID = win.cgID
-                    if let winCG = (CGWindowListCreateDescriptionFromArray(cgIDCFArray[cgID]) as! [[ String : AnyObject]]).last { // get CG window
+                    if let winCG = (CGWindowListCreateDescriptionFromArray(cgIDCFArray[win.cgID]) as! [[ String : AnyObject]]).last { // get CG window
                         let showing = winCG[kCGWindowIsOnscreen as String] as? Bool ?? false
                         if showing {
                             win.color = nil
@@ -267,6 +265,7 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
             for (_, windows) in myScreen {for win in windows { win.color = nil } }
             updateDesktops(Notification(name: .updateAllDesktops, object: nil, userInfo: nil)) // update all Desktops
         }
+        doTimer()
     }
     // screens either slept or awoke
     @objc func screensDidSleepWake(_ notifier: Notification) {
