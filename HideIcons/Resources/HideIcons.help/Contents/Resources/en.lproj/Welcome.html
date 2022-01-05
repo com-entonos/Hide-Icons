@@ -36,11 +36,12 @@
 <img src="Welcome2.jpg" alt="" >
 ￼</p>
 </b><p class="Left Normal"><i>Show Desktop icons</i>/<i>Hide Desktop Icons</i> toggles showing or hiding the Desktop icons.</p>
-</b><p class="Left Normal"><i>Refresh Desktop</i> forces an update of all Desktops across all screens and Spaces. This option will also cause <i>Hide Icons</i> to forget which Desktop goes with which Space (see below). </p>
 </b><p class="Left Normal">If <i>Right-click to show menu</i> is enabled, then clicking on the the menu (<img src="Welcome4.jpg" alt="" >) will toggle Show/Hide Desktop icons and right-click will open the menu. The default is the opposite behavior.
  </p>
 </b><p class="Left Normal">If <i>Check for changing Desktop</i> is set to anything other than <i>Never</i>, <i>Hide Icons</i> will update the Desktop every time interval specified. This allows for changing Desktops.  </p>
 </b><p class="Left Normal"><i>Change menu</i> allows you to hide the menu item (replaces it with a blank icon) or to completely remove the menu from the menu bar. For the latter case, one can still use Services to toggle showing/hiding icons. To get the menu back, simply re-run <i>Hide Icons</i>.  </p>
+</b><p class="Left Normal"><i>Set Desktop wallpaper</i> allows you to use either the actual Desktop wallpaper or to use a custom color wallpaper. Either for all Desktops or for individual Desktops. If you have either more than one display or more than one Space, you have multiple Desktops. </p>
+</b><p class="Left Normal"><i>Refresh Desktop</i> forces an update of all Desktops across all displays and Spaces. This option will also cause <i>Hide Icons</i> to forget which Desktop goes with which Space (see below). This is essentially a restart of <i>Hide Icons</i>. </p>
 <p class="Left Normal">
 
 <p class="Left Normal"><b>2) Services</p>
@@ -57,7 +58,7 @@
 <img src="Welcome5.jpg" alt="" >
 ￼>Change menu>Remove menu was chosen.</p>
 
-<p class="Left Normal">If command key (⌘) is held when <i>Hide Icons</i> starts, the user defined preferences are ignored and default preferences are used instead- useful if you chose an preference you don't like. </p>
+<p class="Left Normal">If command key (⌘) is held when <i>Hide Icons</i> starts, the user defined preferences are overwritten with default preferences- useful if you chose a preference set you don't like. </p>
 
 <p class="Left Normal"><b>4) Requirements</b></p>
 <p class="Left Normal"><i>Hide Icon</i> was written in Swift with Xcode 12.4. It was compiled to support macOS 10.12 (Sierra) through 12.x (Monterey). Versions before 10.4 (High Sierra) can not detect Dark Mode switching.</p>
@@ -66,7 +67,10 @@
 <p class="Left Normal"><i>Hide Icon</i> doesn’t touch the Desktop icons. It simply takes a picture of the Desktop (without the icons) and displays this picture just above the real Desktop giving the illusion that the icons have vanished. THEY HAVE NOT. If you open a Finder window, you can easily navigate to Desktop. From there you can add, remove and manipulate items on the Desktop. You must either Show Desktop Icons or quit <i>Hide Icons</i> to have the usual Desktop back.</p>
 
 <p class="Left Normal">If <i>Check for changing Desktop</i> is set to anything other than <i>Never</i>, then for every time interval specified the picture of the real Desktop is taken to allow for time varying Desktops. Similary, on macOS 10.14 and above,  changes in Appearances (e.g. Dark Mode) are immediately reflected.</p>
-<p class="Left Normal">If you are using multiple Spaces (with any number of screens), <i>Hide Icons</i> doesn't actually know which Desktop goes with which Space. However, once you visit that space, <i>Hide Icons</i> will remember that Desktop goes with that Space. Until it does, switching Spaces may temporarily display the wrong Desktop. Selecting <i>Refresh Desktop</i> will force <i>Hide Icons</i> to forget these correlations.  </p>
+<p class="Left Normal">If you are using multiple Spaces (with any number of displays), <i>Hide Icons</i> doesn't actually know which Desktop goes with which Space. However, once you visit that Space, <i>Hide Icons</i> will remember that Desktop goes with that Space. Until it does, switching Spaces may temporarily display the wrong Desktop. Selecting <i>Refresh Desktop</i> will force <i>Hide Icons</i> to forget these correlations.  </p>
+<p class="Left Normal"><i>Set Desktop wallpaper</i> will determine <i>This Desktop</i> according to where the last mouse click was performed. This may cause some difficulties if <i>Displays have separate Spaces</i> is unchecked in <i>System Preferences...>Mission Control</i>. Simply drag the Color Panel to the Desktop of the Space which does not have a menu bar and then select a custom color for wallpaper. Finally, the menu bar is <i>always</i> tinted according to the actual Desktop. You can turn off tinting by enabling <i>System Preferences...>Accessibility>Display>Display>Reduce transparency</i>. </p>
+
+<p class="Left Normal">On macOS 11.6.2 (Big Sur), the Desktop icons will flash when changing Spaces. This is a bug introduced by Apple and currently no workaround is known. Monterey or earlier versions of macOS do not exhibit this behavior. </p>
 
 <p class="Left Normal"><b>6) Warning/Disclaimer/Licenses</b></p>
 <p class="Left Normal">Using this application won’t make you more attractive or get you rich. Regardless, Hide Icons will never affect your Desktop icons.  </p>
