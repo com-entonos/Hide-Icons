@@ -151,7 +151,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.setSubmenu(subMenu, for: menuItem)
         
         // menu > submenu of actual Desktop or solid color
-        let (currentImage, currentColor) = hider!.desktopFromPoint(NSEvent.mouseLocation, color: desktopColor)
+        let (currentImage, currentColor, currentlyColored) = hider!.desktopFromPoint(NSEvent.mouseLocation, color: desktopColor)
         let previewSize = NSSize(width: 20, height: 20); lastDesktopColor = currentColor
         let bgSubMenu = NSMenu()
         let bgMenuItem = NSMenuItem()
@@ -162,10 +162,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if hider!.numberDesktops > 1 {
             let bgMI = NSMenuItem(title: "actual", action: #selector(self.selectDesktop(_:)), keyEquivalent: "")
             if let desktopImage = currentImage { bgMI.image = NSImage(cgImage: desktopImage, size: previewSize) }
+            bgMI.state = !currentlyColored && desktop != .allDesktop && desktop != .allSolidColorDesktop ? NSControl.StateValue.on : NSControl.StateValue.off
             bgMI.tag = 1
             bgSubMenu.addItem(bgMI)
             let scMI = NSMenuItem(title: "color", action: #selector(self.selectDesktop(_:)), keyEquivalent: "")
             scMI.image = NSImage.swatchWithColor(color: currentColor, size: previewSize)
+            scMI.state = currentlyColored && desktop != .allDesktop && desktop != .allSolidColorDesktop ? NSControl.StateValue.on : NSControl.StateValue.off
             scMI.tag = 2
             bgSubMenu.addItem(scMI)
             bgSubMenu.addItem(NSMenuItem.separator())
@@ -174,10 +176,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         let abgMI = NSMenuItem(title: "actual", action: #selector(self.selectDesktop(_:)), keyEquivalent: "")
         if let desktopImage = currentImage { abgMI.image = NSImage(cgImage: desktopImage, size: previewSize) }
+        abgMI.state = desktop == .allDesktop ? NSControl.StateValue.on : NSControl.StateValue.off
         abgMI.tag = 3
         bgSubMenu.addItem(abgMI)
         let ascMI = NSMenuItem(title: "color", action: #selector(self.selectDesktop(_:)), keyEquivalent: "")
         ascMI.image = NSImage.swatchWithColor(color: currentColor, size: previewSize)
+        ascMI.state = desktop == .allSolidColorDesktop ? NSControl.StateValue.on : NSControl.StateValue.off
         ascMI.tag = 4
         bgSubMenu.addItem(ascMI)
         menu.setSubmenu(bgSubMenu, for: bgMenuItem)
