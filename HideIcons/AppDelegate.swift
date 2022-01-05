@@ -28,6 +28,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     // show menu on left click?
     var defaultClick = true
     
+    // type of Desktop
+    var desktop: DesktopTypes = .allDesktop
+    var desktopColor : NSColor = .black
+    var lastDesktopColor : NSColor = .black
+    
     // Apple doc
     var observation: NSKeyValueObservation?
     
@@ -56,7 +61,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             observation = NSApp.observe(\.effectiveAppearance) { (app, _) in
                 if self.hider!.hidden { // give 3 second delay to make sure the Desktop did in fact update
                     Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false, block: { _ in
-                        print("effectiveAppearance triggered!")
                         NotificationCenter.default.post(name: .updateAllDesktops, object: nil) })
                 }
             }
@@ -119,11 +123,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(NSMenuItem(title: str, action: #selector(self.toggle(_:)), keyEquivalent: ""))
         
         menu.addItem(NSMenuItem.separator())
-        
-        menu.addItem(NSMenuItem(title: "Refresh Desktop", action: #selector(self.refreshDesktops(_:)), keyEquivalent: ""))
-        
-        menu.addItem(NSMenuItem.separator())
-        
+                
         let menuClick = NSMenuItem(title: "Right-click to show menu", action: #selector(self.rightClicked(_:)), keyEquivalent: "")
         menuClick.state = defaultClick ? NSControl.StateValue.off : NSControl.StateValue.on
         menu.addItem(menuClick)
@@ -150,6 +150,42 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         subMenu.addItem(NSMenuItem(title: "Remove menu", action: #selector(self.removeMenu(_:)), keyEquivalent: ""))
         menu.setSubmenu(subMenu, for: menuItem)
         
+        // menu > submenu of actual Desktop or solid color
+        let (currentImage, currentColor) = hider!.desktopFromPoint(NSEvent.mouseLocation, color: desktopColor)
+        let previewSize = NSSize(width: 20, height: 20); lastDesktopColor = currentColor
+        let bgSubMenu = NSMenu()
+        let bgMenuItem = NSMenuItem()
+        bgMenuItem.title = "Set Desktop wallpaper"
+        menu.addItem(bgMenuItem)
+        let bgT1 = NSMenuItem(title: "This Desktop", action: nil, keyEquivalent: "")
+        bgSubMenu.addItem(bgT1)
+        if hider!.numberDesktops > 1 {
+            let bgMI = NSMenuItem(title: "actual", action: #selector(self.selectDesktop(_:)), keyEquivalent: "")
+            if let desktopImage = currentImage { bgMI.image = NSImage(cgImage: desktopImage, size: previewSize) }
+            bgMI.tag = 1
+            bgSubMenu.addItem(bgMI)
+            let scMI = NSMenuItem(title: "color", action: #selector(self.selectDesktop(_:)), keyEquivalent: "")
+            scMI.image = NSImage.swatchWithColor(color: currentColor, size: previewSize)
+            scMI.tag = 2
+            bgSubMenu.addItem(scMI)
+            bgSubMenu.addItem(NSMenuItem.separator())
+            let bgT2 = NSMenuItem(title: "All Desktops", action: nil, keyEquivalent: "")
+            bgSubMenu.addItem(bgT2)
+        }
+        let abgMI = NSMenuItem(title: "actual", action: #selector(self.selectDesktop(_:)), keyEquivalent: "")
+        if let desktopImage = currentImage { abgMI.image = NSImage(cgImage: desktopImage, size: previewSize) }
+        abgMI.tag = 3
+        bgSubMenu.addItem(abgMI)
+        let ascMI = NSMenuItem(title: "color", action: #selector(self.selectDesktop(_:)), keyEquivalent: "")
+        ascMI.image = NSImage.swatchWithColor(color: currentColor, size: previewSize)
+        ascMI.tag = 4
+        bgSubMenu.addItem(ascMI)
+        menu.setSubmenu(bgSubMenu, for: bgMenuItem)
+        
+        menu.addItem(NSMenuItem.separator())
+        
+        menu.addItem(NSMenuItem(title: "Refresh Desktop", action: #selector(self.refreshDesktops(_:)), keyEquivalent: ""))
+        
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Help", action: #selector(self.getHelp(_:)), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "About", action: #selector(self.about(_:)), keyEquivalent: ""))
@@ -166,6 +202,41 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc func menuDidClose(_ menu: NSMenu) { // teardown menu for next time SBI is clicked
         statusBarItem?.menu = nil
     }
+    @objc func selectDesktop(_ menu: NSMenuItem) {
+        let option = menu.tag as Int
+        switch option {
+        case 2 :
+            desktop = .solidColorDesktop
+        case 4 :
+            desktop = .allSolidColorDesktop
+        case 3 :
+            desktop = .allDesktop
+            NotificationCenter.default.post(name: .desktopType, object: (desktopColor, desktop, NSEvent.mouseLocation))
+        default:
+            desktop = .desktop
+            NotificationCenter.default.post(name: .desktopType, object: (desktopColor, desktop, NSEvent.mouseLocation))
+        }
+        if desktop != .desktop && desktop != .allDesktop {
+            NotificationCenter.default.post(name: .desktopType, object: (lastDesktopColor, desktop, NSEvent.mouseLocation))
+            let picker = NSColorPanel.shared
+            picker.color = lastDesktopColor
+            picker.mode = .wheel
+            picker.showsAlpha = false
+            picker.hidesOnDeactivate = false
+            picker.isFloatingPanel = true
+            //picker.isMovableByWindowBackground = true
+            //picker.becomesKeyOnlyIfNeeded = false
+            picker.setTarget(self)
+            picker.setAction(#selector(colorChosen(_:)))
+            picker.color = desktopColor
+            picker.makeKeyAndOrderFront(nil)
+        }
+    }
+    @objc func colorChosen(_ picker: NSColorPanel) {
+        desktopColor = NSColorPanel.shared.color
+        NotificationCenter.default.post(name: .desktopType, object: (desktopColor, desktop, NSEvent.mouseLocation))
+    }
+
     // called when icons should hidden or shown
     @objc func toggle(_ sender: Any?) {
         NotificationCenter.default.post(name: .doHide, object: nil)
@@ -220,4 +291,18 @@ extension NSEvent { // so .rightMouseDown does not capture control+.leftMouseDow
     var isRightClick: Bool {
         return (self.type == .rightMouseDown) || (self.type == .leftMouseDown && self.modifierFlags.contains(.control))
     }
+}
+
+extension NSImage { // return an solid color image
+  class func swatchWithColor(color: NSColor, size: NSSize) -> NSImage {
+    let image = NSImage(size: size)
+    image.lockFocus()
+    color.drawSwatch(in: NSRect(origin: .zero, size: size))
+    image.unlockFocus()
+    return image
+  }
+}
+
+enum DesktopTypes: Int {    // different options for Desktop wallpapers
+    case allDesktop = 1, desktop, allSolidColorDesktop, solidColorDesktop
 }
