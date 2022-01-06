@@ -201,6 +201,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         return menu
     }
     @objc func refreshDesktops(_ sender: Any?) {
+        desktop = .allDesktop
         NotificationCenter.default.post(name: .createDesktops, object: nil)
     }
     @objc func menuDidClose(_ menu: NSMenu) { // teardown menu for next time SBI is clicked
