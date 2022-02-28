@@ -188,7 +188,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         
         menu.addItem(NSMenuItem.separator())
         
-        menu.addItem(NSMenuItem(title: "Refresh Desktop", action: #selector(self.refreshDesktops(_:)), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "Force Desktop refresh", action: #selector(self.refreshDesktops(_:)), keyEquivalent: ""))
         
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Help", action: #selector(self.getHelp(_:)), keyEquivalent: ""))

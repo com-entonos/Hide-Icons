@@ -48,8 +48,6 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         }
     }
     
-    //var dbWin : [ NSScreen : NSWindow] = [:]
-    //var dbSpace : [ CGWindowID : NSWindow] = [:]
     var myScreen: [NSScreen : [MyWindow]] = [:] // for each screen, a list of Desktop windows corresponding to number of Spaces for that screen
     var BGTimer : Timer?                        // lazy update for Desktop pics
     var BGTime = TimeInterval(730000.0)         // time interveral for lazy updates
@@ -98,7 +96,7 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
     }
 
     @objc func updateDesktops(_ notifier : Notification) {  // update pictures of Desktop(s)
-        if notifier.name == NSWorkspace.activeSpaceDidChangeNotification { screensAwake = true; usleep(100_000) }  //ugh! FIXME apple
+        if notifier.name == NSWorkspace.activeSpaceDidChangeNotification { screensAwake = true; usleep(150_000) }  //ugh! FIXME apple
         if !screensAwake { return }                         // punt if screens are sleeping
         //print("updateDesktops \(notifier.name == .updateAllDesktops) \(notifier.name)")
         
@@ -117,8 +115,6 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
                             let imageView = NSImageView(image: image)
                             window.setWin(imageView: imageView, showing: showing, hidden: hidden)   // update the picture
                         }
-                        //dbWin[screen]!.contentView = NSImageView(image: image)
-                        //dbSpace[window.cgID]?.contentView = NSImageView(image: image)
                     }
                 }
             }
@@ -128,11 +124,10 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
     }
     
     @objc func createDesktops(_ notifier : Any?) {          // make window for each desktop
-        //print("createDesktops \(screensAwake) \(String(describing: (notifier as? Notification)?.name ?? nil))")
-        let h0 = NSHeight((NSScreen.screens.filter({$0.frame.origin == CGPoint.zero}).first?.frame)!) // height of Screen that has menu bar
-        screensAwake = true     // must be true, otherwise this would not have been called
-        
         BGTimer?.invalidate()   // stop any timer
+        
+        //print("createDesktops \(screensAwake) \(String(describing: (notifier as? Notification)?.name ?? nil))")
+        screensAwake = true     // must be true, otherwise this would not have been called
         
         // need to find Desktop windows... (let's use apple's approved way so we don't trip up security guards)
         let windows = CGWindowListCopyWindowInfo([.optionAll], kCGNullWindowID)! as! [[String: AnyObject]]  // get all the windows everywhere
@@ -141,7 +136,7 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
             let windowLevel = $0[kCGWindowLayer as String] as! CGWindowLevel
             return windowLevel == desktopWindowLevel
         }
-        let desktopCGID = desktopWindows.map { $0[kCGWindowNumber as String] as! CGWindowID}                // array of Desktop background image CGWindowID
+        let desktopCGID = desktopWindows.map { $0[kCGWindowNumber as String] as! CGWindowID}                // [CGWindowID] array of CGWindowID for all Desktops
         
         // now create a CFArray with all the CGWindowID that are Desktop pictures
         let pointer = UnsafeMutablePointer<UnsafeRawPointer?>.allocate(capacity: desktopCGID.count)
@@ -160,6 +155,7 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         for (_, wins) in myScreen { for win in wins { win.orderOut(nil)} } // if there any windows, don't show them anymore
         myScreen = [:]
         
+        let h0 = NSHeight((NSScreen.screens.filter({$0.frame.origin == CGPoint.zero}).first?.frame)!) // height of Screen that has menu bar
         for screen in NSScreen.screens { // need to create a list of windows for this screen to accomodate the number of Spaces it has
             //var xoff : CGFloat = 0
             let rectNS = screen.frame   // get frame of Screen in screen coordinates
@@ -178,29 +174,6 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
                     
                     if myScreen[screen] == nil { myScreen[screen] = [win] } else { myScreen[screen]!.append(win) }  // and store the window into the dictionary
                     //print("  A>\(screen.frame) \(win.cgID) \(win.collectionBehavior == .stationary)")
-                    
-                    /*
-                    if dbWin[screen] == nil && window[kCGWindowIsOnscreen as String] as? Bool ?? false {
-                        let rs = screen.frame
-                        let rect = CGRect(origin: rs.origin, size: CGSize(width: rs.width/2, height: rs.height/2))
-                        dbWin[screen] = NSWindow(contentRect: rect, styleMask: [.miniaturizable, .closable, .resizable, .titled], backing: .buffered, defer: false)
-                        dbWin[screen]?.title = "preview \(screen.frame.origin.y)"
-                        //dbWin[screen]?.makeKeyAndOrderFront(nil)
-                        dbWin[screen]?.orderFront(nil)
-                        dbWin[screen]?.collectionBehavior = .canJoinAllSpaces
-                        print(dbWin[screen]?.frame,rect,rs,dbWin[screen]?.canBecomeKey,dbWin[screen]?.canBecomeMain)
-                    }
-                    */
-                    /*
-                    let rt = CGRect(x: xoff, y: rect.origin.y, width: rect.width / 10.0, height: rect.height / 10.0)
-                    xoff = xoff + rect.width / 10.0
-                    dbSpace[cgID] = NSWindow(contentRect: rt, styleMask: [.miniaturizable, .closable, .resizable, .titled], backing: .buffered, defer: false)
-                    dbSpace[cgID]?.title = "\(cgID)"
-                    dbSpace[cgID]?.orderFront(nil)
-                    dbSpace[cgID]?.collectionBehavior = .canJoinAllSpaces
-                    dbSpace[cgID]?.contentView = NSImageView(image: image)
-                    print(cgID,dbSpace[cgID]!.frame,xoff)
-                    */
                 }
             }
         }
@@ -269,7 +242,7 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
     // screens either slept or awoke
     @objc func screensDidSleepWake(_ notifier: Notification) {
         screensAwake = notifier.name == NSWorkspace.screensDidWakeNotification
-        if screensAwake { updateDesktops(Notification(name: .updateAllDesktops, object: nil, userInfo: nil)) } // if awake, update all windows
+        if screensAwake { usleep(500_000); updateDesktops(Notification(name: .updateAllDesktops, object: nil, userInfo: nil)) } // if awake, update all windows
         //print("didSleepWake \(screensAwake) \(notifier)")
     }
     // set up initial window lists for each screen and observers
@@ -289,6 +262,7 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
     }
     // tear down observers (is this really necessary?)
     deinit {
+        BGTimer?.invalidate() // invalidate any background timers
         NotificationCenter.default.removeObserver(self, name: .doHide, object: nil)
         NotificationCenter.default.removeObserver(self, name: .timeBG, object: nil)
         NSWorkspace.shared.notificationCenter.removeObserver(self, name: NSWorkspace.activeSpaceDidChangeNotification, object: nil)
@@ -299,7 +273,6 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         NotificationCenter.default.removeObserver(self, name: .updateDesktop, object: nil)
         NotificationCenter.default.removeObserver(self, name: .updateAllDesktops, object: nil)
         NotificationCenter.default.removeObserver(self, name: .desktopType, object: nil)
-        BGTimer?.invalidate() // invalidate any background timers
         myScreen = [:] // and free up screen/window dictionary
     }
 }
