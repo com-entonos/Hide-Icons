@@ -21,12 +21,19 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
     class MyWindow : NSWindow { // just add some data and methods for NSWindow- this will hold a window w/ a Desktop pic
         var cgID: CGWindowID        // CGWindowID of a Desktop
         var color: NSColor? = nil   // display solid color instead of actual Desktop? nil means actual, otherwise that color
+        var cgIDCF: CFArray? = nil  // CFArray of CGWindowID used for CG routines
         
         init(contentRect: NSRect, cgID: CGWindowID) {
             self.cgID = cgID
+            let pointer = UnsafeMutablePointer<UnsafeRawPointer?>.allocate(capacity: 1) // construct CFArray for this CGWindowID
+            pointer[0] = UnsafeRawPointer(bitPattern: UInt(cgID))
+            cgIDCF = CFArrayCreate(kCFAllocatorDefault, pointer, 1, nil)                //used in CGWindowListCreateDescriptionFromArray call
             super.init(contentRect: contentRect, styleMask: .borderless, backing: .buffered, defer: false) // create NSWindow
-            
-            self.setFrame(contentRect, display: true, animate: false)  // is this necessary?
+            reset(contentRect: contentRect)
+        }
+        
+        func reset(contentRect: NSRect) {
+            self.setFrame(contentRect, display: true, animate: false)   // force the correct frame for window
             self.collectionBehavior = .canJoinAllSpaces  // we want the window to follow Spaces around (until we find the correct space then we'll pin it on top)
             self.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.backstopMenu)))  //hack? this makes mission control and expose ignore the window
             self.orderBack(nil)  // critical we place on back
@@ -38,56 +45,50 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
             //self.animationBehavior = .default
         }
         
-        func setWin(imageView: NSImageView?, showing: Bool, hidden: Bool) { // update picture and pin if we found the correct Space
-            if self.color == nil { self.contentView = imageView! }
-            //print(self.cgID,showing,hidden,self.collectionBehavior == .stationary)
-            if showing { // if this is currently showing, bring to front and pin it to this Space
+        func setWin(imageView: NSImageView, onScreen: Bool, hidden: Bool) { // update picture and pin if we found the correct Space
+            if onScreen {   // if this is currently showing, bring to front and pin it to this Space
                 self.orderFront(nil); self.collectionBehavior = .stationary; self.animationBehavior = .none
+                //if self.screen?.frame != self.frame { self.setFrame(self.screen!.frame, display: true, animate: false)}
             }
+            self.contentView = imageView
             if !hidden { self.orderOut(nil) }  // showing desktop, don't show this window at all
+            print("in setWin, cgID=\(self.cgID), onScreen=\(onScreen), hidden=\(hidden), stationary?\(self.collectionBehavior == .stationary), screen.frame==frame?\(self.screen?.frame == self.frame)")
         }
     }
     
-    var myScreen: [NSScreen : [MyWindow]] = [:] // for each screen, a list of Desktop windows corresponding to number of Spaces for that screen
+    var myDesktops : [ CGWindowID : MyWindow] = [:] //
     var BGTimer : Timer?                        // lazy update for Desktop pics
     var BGTime = TimeInterval(730000.0)         // time interveral for lazy updates
     var hidden_ = false                         // are icons hidden?
-    var deskCFArray : CFArray?                  // array that holds the CGWindowID of Desktops as a CFArray used in CG routines
     var cgIDCFArray: [ CGWindowID : CFArray ] = [:] // dictionary that holds CGWindowID in a CFArray used in CG routines
-    var screensAwake = true                     // are the screens awake?
+    var observation: NSKeyValueObservation?     // Apple doc- to detect dark/light mode switch
     
     var hidden: Bool {                          // are icons currently hidden?
         get { return hidden_ }
         set (value) { hidden_ = value }
     }
     // hide or show Desktop icons
-    @objc func doHide(_ notifier : Notification) { //print("in doHide \(!hidden) \(myScreen.isEmpty) \(notifier)")
-        screensAwake = true     // must be, otherwise this could not have been triggered
+    func doHide() { print("in doHide, hidden=\(!hidden), empty myDesktops?\(myDesktops.isEmpty)")
         hidden = !hidden        // toggle hide/show icons
         if hidden {             // appears the user want to hide icons
-            for (_, wins) in myScreen {
-                for win in wins { //print("  windows: \(win.frame) \(win.cgID) \(win.collectionBehavior)")
-                    if win.collectionBehavior == .stationary { win.orderFront(nil) }    // this window as previously pinned, so we know which Space, bring it to front
-                    else { win.orderBack(nil) }                                         // this window was not previously pinned, place in back
-                }
+            for (_, win) in myDesktops {
+                if win.collectionBehavior == .stationary { win.orderFront(nil) } else { win.orderBack(nil) }
             }
-            updateDesktops(Notification(name: .updateAllDesktops, object: nil, userInfo: nil)) // force all Desktops to be updated
+            updateDesktops(true) // force all Desktops to be updated
         } else {
             BGTimer?.invalidate()        // stop timer since icons are not hidden
-            for (_, wins) in myScreen { for win in wins { win.orderOut(nil) } }   // don't show any of the Desktop windows
+            for (_, win) in myDesktops { win.orderOut(nil) }   // don't show any of the Desktop windows
         }
     }
-    
-    func doTimer() { //print("in doTimer \(BGTime)")
+    // start a repeating timer to update all Desktops
+    func doTimer() { print("in doTimer, BGTime=\(BGTime), valid?\(BGTime < 720000.0)")
         BGTimer?.invalidate()
-        if BGTime < 720000.0 { //print("  starting timer...") // only start timer if time interval is less than 200 hours
-            BGTimer = Timer.scheduledTimer(withTimeInterval: BGTime, repeats: true,
-                                           block: { _ in self.updateDesktops(Notification(name: .updateAllDesktops, object: nil, userInfo: nil)) })
+        if BGTime < 720000.0 {  // only start timer if time interval is less than 200 hours
+            BGTimer = Timer.scheduledTimer(withTimeInterval: BGTime, repeats: true, block: { _ in self.updateDesktops(true) })
         }
     }
-    
-    @objc func timerChanged(_ notifier : Notification) { //print("in timerChanged, \(notifier.object as! TimeInterval)")
-        screensAwake = true // must be, otherwise this would not have been triggered
+    // called when user changes the repeating timer interval
+    @objc func timerChanged(_ notifier : Notification) { print("in timerChanged, TimeInterval=\(notifier.object as! TimeInterval)")
         if let time = notifier.object as? TimeInterval {
             BGTime = time
             if hidden { doTimer() }         // only start timer if icons are hidden
@@ -95,104 +96,95 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         }
     }
 
-    @objc func updateDesktops(_ notifier : Notification) {  // update pictures of Desktop(s)
-        if notifier.name == NSWorkspace.activeSpaceDidChangeNotification { screensAwake = true; usleep(150_000) }  //ugh! FIXME apple
-        if !screensAwake { return }                         // punt if screens are sleeping
-        //print("updateDesktops \(notifier.name == .updateAllDesktops) \(notifier.name)")
+    func updateDesktops(_ doAll : Bool = false) {  // update pictures of Desktop(s)
+        BGTimer?.invalidate()           // stop any timers
+        print("updateDesktops, doAll=\(doAll) number of myDesktops:\(myDesktops.count), screens:\(Set(myDesktops.map({$0.value.screen})).count)")
         
-        BGTimer?.invalidate()                               // stop any timers
-        for screen in NSScreen.screens {                    // for each screen
-            for window in myScreen[screen]! {               //   loop through windows (i.e. Spaces)
-                if let winCG = (CGWindowListCreateDescriptionFromArray(cgIDCFArray[window.cgID]) as! [[ String : AnyObject]]).last { // get CG window
-                    let showing = winCG[kCGWindowIsOnscreen as String] as? Bool ?? false        // is it on screen?
-                    if showing || notifier.name == .updateAllDesktops { // only update image if we're showing or if we were requested to do all
-                        //print("  U>\(screen.frame) \(window.cgID) \(showing) \(window.collectionBehavior == .stationary) \(notifier.name == .updateAllDesktops) \(window.color)")
-                        if window.color != nil {            // do we want the actual Desktop wallpaper?
-                            window.setWin(imageView: nil, showing: showing, hidden: hidden)         // leave the solid color alone
-                        } else {
-                            guard let cgImage = CGWindowListCreateImage(.null, [.optionIncludingWindow], window.cgID, [.nominalResolution]) else { continue }  // grab the picture
-                            let image = NSImage(cgImage: cgImage, size: NSZeroSize)
-                            let imageView = NSImageView(image: image)
-                            window.setWin(imageView: imageView, showing: showing, hidden: hidden)   // update the picture
-                        }
-                    }
+        for cgWin in getDesktopArray(doAll ? .optionAll: .optionOnScreenOnly) {
+            if let win = myDesktops[cgWin] {
+                let desc = (CGWindowListCreateDescriptionFromArray(win.cgIDCF) as! [[String : AnyObject]]).last
+                let onScreen = desc![kCGWindowIsOnscreen as String] as? Bool ?? false
+                if win.color == nil {
+                    guard let cgImage = CGWindowListCreateImage(.null, [.optionIncludingWindow], cgWin, [.nominalResolution]) else { continue }
+                    let image = NSImage(cgImage: cgImage, size: NSZeroSize)
+                    let imageView = NSImageView(image: image)
+                    win.setWin(imageView: imageView, onScreen: onScreen, hidden: hidden)
+                } else {
+                    let image = NSImage.swatchWithColor(color: win.color!, size: win.frame.size)
+                    let imageView = NSImageView(image: image)
+                    win.setWin(imageView: imageView, onScreen: onScreen, hidden: hidden)
                 }
-            }
+            } else {print("oh no- \(cgWin) is not in MyDesktops!")}
         }
         doTimer()                                           // restart any timers
-        //print("number of myScreen:\(myScreen.count), desktops:\(myScreen.mapValues({$0.count}))")
+        print("number of myDesktops:\(myDesktops.count), screens:\(Set(myDesktops.map({$0.value.screen})).count)")
     }
     
-    @objc func createDesktops(_ notifier : Any?) {          // make window for each desktop
-        BGTimer?.invalidate()   // stop any timer
-        
-        //print("createDesktops \(screensAwake) \(String(describing: (notifier as? Notification)?.name ?? nil))")
-        screensAwake = true     // must be true, otherwise this would not have been called
-        
+    func getDesktopArray(_ option: CGWindowListOption = .optionAll) -> [CGWindowID] {
         // need to find Desktop windows... (let's use apple's approved way so we don't trip up security guards)
-        let windows = CGWindowListCopyWindowInfo([.optionAll], kCGNullWindowID)! as! [[String: AnyObject]]  // get all the windows everywhere
+        let windows = CGWindowListCopyWindowInfo([option], kCGNullWindowID)! as! [[String: AnyObject]]  // get (all or onscreen) windows
         let desktopWindowLevel = CGWindowLevelForKey(.desktopWindow) - 1                                    // level of Desktop background image
         let desktopWindows = windows.filter {
             let windowLevel = $0[kCGWindowLayer as String] as! CGWindowLevel
             return windowLevel == desktopWindowLevel
         }
-        let desktopCGID = desktopWindows.map { $0[kCGWindowNumber as String] as! CGWindowID}                // [CGWindowID] array of CGWindowID for all Desktops
-        
+        return desktopWindows.map { $0[kCGWindowNumber as String] as! CGWindowID}       // array of CGWindowID that are Desktop windows
+    }
+    
+    func getDesktopCGWindowID(_ option: CGWindowListOption = .optionAll) -> CFArray? {
+        let desktopCGID = getDesktopArray(option)              // array of CGWindowID for (all or onscreen) Desktops
+
         // now create a CFArray with all the CGWindowID that are Desktop pictures
         let pointer = UnsafeMutablePointer<UnsafeRawPointer?>.allocate(capacity: desktopCGID.count)
         for (index, win) in desktopCGID.reversed().enumerated() {       // we reverse simply so when we create the windows, they stack up in a way that makes more sense
             pointer[index] = UnsafeRawPointer(bitPattern: UInt(win))
         }
-        deskCFArray = CFArrayCreate(kCFAllocatorDefault, pointer, desktopCGID.count, nil)  // there it is. used in CGWindowListCreateDescriptionFromArray call
+        return CFArrayCreate(kCFAllocatorDefault, pointer, desktopCGID.count, nil)  // there it is. used in CGWindowListCreateDescriptionFromArray call
+    }
+    
+    func createDesktops() {      // make window for each desktop
+        BGTimer?.invalidate()   // stop any timer
+        let h0 = NSHeight((NSScreen.screens.filter({$0.frame.origin == CGPoint.zero}).first?.frame)!)   // height of Screen that has menu bar
         
-        // now create CFArray w/ one element for each of the CGWindowID that are Desktop picturess
-        for cgID in desktopCGID {
-            let pointer = UnsafeMutablePointer<UnsafeRawPointer?>.allocate(capacity: 1)
-            pointer[0] = UnsafeRawPointer(bitPattern: UInt(cgID))
-            cgIDCFArray[cgID] = CFArrayCreate(kCFAllocatorDefault, pointer, 1, nil)       // there it is, store it as value in dictionary. used in CGWindowListCreateDescriptionFromArray call
-        }
-        
-        for (_, wins) in myScreen { for win in wins { win.orderOut(nil)} } // if there any windows, don't show them anymore
-        myScreen = [:]
-        
-        let h0 = NSHeight((NSScreen.screens.filter({$0.frame.origin == CGPoint.zero}).first?.frame)!) // height of Screen that has menu bar
-        for screen in NSScreen.screens { // need to create a list of windows for this screen to accomodate the number of Spaces it has
-            //var xoff : CGFloat = 0
-            let rectNS = screen.frame   // get frame of Screen in screen coordinates
-            let origin = CGPoint(x: rectNS.origin.x, y: h0 - rectNS.origin.y - rectNS.height)   // translate from Screen to CG origin: y_CG = h0 - y_Screen - height
-            let rect = CGRect(origin: origin, size: rectNS.size)                                // this CGRect is in CG coordinates for the Screen
-            for window in CGWindowListCreateDescriptionFromArray(deskCFArray) as! [[ String : AnyObject]] {  // get all of the Desktop windows
-                let rectCG = CGRect(dictionaryRepresentation: window[kCGWindowBounds as String] as! CFDictionary)!  // get CGRect in CG coordinates (not Screen coordinates)
-                if rectCG == rect {  // this Desktop window has the same frame as the screen, it must be one of the Spaces
-                    let cgID = window[kCGWindowNumber as String] as! CGWindowID     // get the CGWindowID
-                    let win = MyWindow(contentRect: screen.frame, cgID: cgID)       // create a window for this Desktop picture w/ exact size of the Screen
-                    guard let cgImage = CGWindowListCreateImage(.null, [.optionIncludingWindow], cgID, [.nominalResolution]) else { continue }  //grab a picture of Desktop
-                    
+        print("createDesktops, myDesktop.count=\(myDesktops.count)")
+
+        for desktopWindows in CGWindowListCreateDescriptionFromArray(getDesktopCGWindowID()) as! [[String : AnyObject]] { // loop over CGWindows that are Desktops...
+            let rectCG = CGRect(dictionaryRepresentation: desktopWindows[kCGWindowBounds as String] as! CFDictionary)!
+            let origin = CGPoint(x: rectCG.origin.x, y: h0 - rectCG.origin.y - rectCG.height)
+            let rect = CGRect(origin: origin, size: rectCG.size)            // CGrect is in Screen coordinates
+            let cgID = desktopWindows[kCGWindowNumber as String] as! CGWindowID
+            if myDesktops[cgID] == nil {
+                myDesktops[cgID] = MyWindow(contentRect: rect, cgID: cgID)
+            } else {
+                myDesktops[cgID]!.reset(contentRect: rect)
+            }
+            let onScreen = desktopWindows[kCGWindowIsOnscreen as String] as? Bool ?? false
+            if let win = myDesktops[cgID] {
+                if win.color == nil {
+                    guard let cgImage = CGWindowListCreateImage(.null, [.optionIncludingWindow], cgID, [.nominalResolution]) else { continue }
                     let image = NSImage(cgImage: cgImage, size: NSZeroSize)
                     let imageView = NSImageView(image: image)
-                    win.setWin(imageView: imageView, showing: false, hidden: hidden)    // add the picture to the window
-                    
-                    if myScreen[screen] == nil { myScreen[screen] = [win] } else { myScreen[screen]!.append(win) }  // and store the window into the dictionary
-                    //print("  A>\(screen.frame) \(win.cgID) \(win.collectionBehavior == .stationary)")
+                    win.setWin(imageView: imageView, onScreen: onScreen, hidden: hidden)
+                } else {
+                    let image = NSImage.swatchWithColor(color: win.color!, size: rect.size)
+                    let imageView = NSImageView(image: image)
+                    win.setWin(imageView: imageView, onScreen: onScreen, hidden: hidden)
                 }
             }
         }
-        updateDesktops(Notification(name: .updateDesktop, object: nil, userInfo: nil))  // now go set the currently displayed Desktops
-        //print("number of myScreen:\(myScreen.count), desktops:\(myScreen.mapValues({$0.count}))")
+        print("number of myDesktops:\(myDesktops.count), screens:\(Set(myDesktops.map({$0.value.screen})).count)")
     }
     // number of Desktops
-    var numberDesktops: Int {
-        get { return myScreen.map { _, wins in wins.count}.reduce(0, +) }
+    var numberOfDesktops: Int {
+        get { return getDesktopArray().count }
     }
     // given a point on screen, return the Desktop image and color
     func desktopFromPoint(_ point : CGPoint, color : NSColor) -> (CGImage?, NSColor, Bool) {
         for screen in NSScreen.screens.filter({$0.frame.contains(point)}) {
-            for win in myScreen[screen]! {
-                if let winCG = (CGWindowListCreateDescriptionFromArray(cgIDCFArray[win.cgID]) as! [[ String : AnyObject]]).last { // get CG window
-                    if winCG[kCGWindowIsOnscreen as String] as? Bool ?? false {
-                        guard let cgImage = CGWindowListCreateImage(.null, [.optionIncludingWindow], win.cgID, [.nominalResolution]) else { continue }  // grab the picture
-                        return (cgImage, win.color ?? color, win.color != nil)
-                    }
+            for cgID in getDesktopArray(.optionOnScreenOnly) {
+                if myDesktops[cgID]?.screen == screen {
+                    guard let cgImage = CGWindowListCreateImage(.null, [.optionIncludingWindow], cgID, [.nominalResolution]) else { continue }
+                    return (cgImage, myDesktops[cgID]!.color ?? color, myDesktops[cgID]!.color != nil)
                 }
             }
         }
@@ -200,80 +192,72 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
     }
     // want solid color or actual wallpaper for Desktop
     @objc func desktopTypeChange(_ notifier: Notification) {
-        screensAwake = true
         BGTimer?.invalidate()
         let (color, desktop, mousePoint ) = notifier.object as? (NSColor, DesktopTypes, CGPoint) ?? (NSColor.black, .allDesktop, CGPoint.zero)
         switch desktop {
-        case .solidColorDesktop, .desktop: // one Desktop is either getting a solid color or the actual Desktop
+        case .solidColorDesktop, .desktop: // one Desktop is either getting a solid color or the actual Desktop, find it
             for screen in NSScreen.screens.filter({$0.frame.contains(mousePoint)}) { // only if the mouse click was on this screen
-                for win in myScreen[screen]! {
-                    if let winCG = (CGWindowListCreateDescriptionFromArray(cgIDCFArray[win.cgID]) as! [[ String : AnyObject]]).last { // get CG window
-                        let showing = winCG[kCGWindowIsOnscreen as String] as? Bool ?? false
-                        if showing {
-                            win.color = nil
-                            if desktop == .solidColorDesktop { // want a solid color
-                                let image = NSImage.swatchWithColor(color: color, size: win.frame.size)
-                                let imageView = NSImageView(image: image)
-                                win.setWin(imageView: imageView, showing: showing, hidden: hidden)
-                                win.color = color
-                            }
-                        }
-                    }
+                for cgID in getDesktopArray(.optionOnScreenOnly) {
+                    if myDesktops[cgID]?.screen == screen { myDesktops[cgID]!.color = (desktop == .solidColorDesktop) ? color :  nil }
                 }
             }
-            updateDesktops(Notification(name: .updateDesktop, object: nil, userInfo: nil))  // update currently displayed Desktops
         case .allSolidColorDesktop: // all Desktops get a solid color
-            for (screen, windows) in myScreen {
-                let image = NSImage.swatchWithColor(color: color, size: screen.frame.size)
-                for win in windows {
-                    win.color = nil
-                    let imageView = NSImageView(image: image)
-                    win.setWin(imageView: imageView, showing: false, hidden: hidden)
-                    win.color = color
-                }
-            }
-            updateDesktops(Notification(name: .updateAllDesktops, object: nil, userInfo: nil)) // update all Desktops
+            for (_, win) in myDesktops { win.color = color }
         default:    // all Desktops are actual
-            for (_, windows) in myScreen {for win in windows { win.color = nil } }
-            updateDesktops(Notification(name: .updateAllDesktops, object: nil, userInfo: nil)) // update all Desktops
+            for (_, win) in myDesktops { win.color = nil }
         }
-        doTimer()
+        updateDesktops(desktop == .allDesktop || desktop == .allSolidColorDesktop)  // will also restart timer
     }
     // screens either slept or awoke
     @objc func screensDidSleepWake(_ notifier: Notification) {
-        screensAwake = notifier.name == NSWorkspace.screensDidWakeNotification
-        if screensAwake { usleep(500_000); updateDesktops(Notification(name: .updateAllDesktops, object: nil, userInfo: nil)) } // if awake, update all windows
-        //print("didSleepWake \(screensAwake) \(notifier)")
+        if notifier.name == NSWorkspace.screensDidWakeNotification {// if awake, update all windows & start timers
+            Timer.scheduledTimer(withTimeInterval: 2.0, repeats: false, block: { _ in self.updateDesktops(true) }); print("didWake")
+        } else {
+            BGTimer?.invalidate(); print("didSleep")
+        }
     }
     // set up initial window lists for each screen and observers
     init() {
-        hidden = true; screensAwake = true
-        createDesktops(nil) // go grab all the Desktops
-        NotificationCenter.default.addObserver(self, selector: #selector(self.doHide(_:)), name: .doHide, object: nil) // catch toggle
-        NotificationCenter.default.addObserver(self, selector: #selector(self.timerChanged(_:)), name: .timeBG, object: nil) // catch background timer interval
-        NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(self.updateDesktops(_:)), name: NSWorkspace.activeSpaceDidChangeNotification, object: nil) // Space changes
-        NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(screensDidSleepWake(_:)), name: NSWorkspace.screensDidSleepNotification, object: nil)
-        NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(screensDidSleepWake(_:)), name: NSWorkspace.screensDidWakeNotification, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(self.createDesktops(_:)), name: NSApplication.didChangeScreenParametersNotification, object: nil) // Screens change
-        NotificationCenter.default.addObserver(self, selector: #selector(self.createDesktops(_:)), name: .createDesktops, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(self.updateDesktops(_:)), name: .updateDesktop, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(self.updateDesktops(_:)), name: .updateAllDesktops, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(self.desktopTypeChange(_:)), name: .desktopType, object: nil)
+        hidden = true
+        createDesktops() // go grab all the Desktops
+        
+        let NCdefault = NotificationCenter.default
+        NCdefault.addObserver(self, selector: #selector(self.timerChanged(_:)), name: .timeBG, object: nil)             // catch background timer interval
+        NCdefault.addObserver(self, selector: #selector(self.desktopTypeChange(_:)), name: .desktopType, object: nil)   // desktops are actual or solid color, for one or all
+        NCdefault.addObserver(forName: .createDesktops, object: nil, queue: OperationQueue.current, using: { not in self.createDesktops() })
+        NCdefault.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: OperationQueue.current, using: {_ in self.createDesktops()})
+        NCdefault.addObserver(forName: .updateDesktop, object: nil, queue: OperationQueue.current, using: { _ in self.updateDesktops(false)})
+        NCdefault.addObserver(forName: .updateAllDesktops, object: nil, queue: OperationQueue.current, using: { _ in self.updateDesktops(true)})
+        NCdefault.addObserver(forName: .doHide, object: nil, queue: OperationQueue.current, using: {_ in self.doHide() })
+        let WSsharedNC = NSWorkspace.shared.notificationCenter
+        WSsharedNC.addObserver(self, selector: #selector(screensDidSleepWake(_:)), name: NSWorkspace.screensDidSleepNotification, object: nil)
+        WSsharedNC.addObserver(self, selector: #selector(screensDidSleepWake(_:)), name: NSWorkspace.screensDidWakeNotification, object: nil)
+        WSsharedNC.addObserver(forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: OperationQueue.current, using: { _ in usleep(150_000); self.updateDesktops(false)}) //ugh! FIXME apple
+        
+        // this should capture in/out of Dark Mode
+        if #available(OSX 10.14, *) {
+            observation = NSApp.observe(\.effectiveAppearance) { (app, _) in
+                if self.hidden { // give 3 second delay to make sure the Desktop did in fact update
+                    Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false, block: { _ in self.updateDesktops(true) })
+                }
+            }
+        }
     }
     // tear down observers (is this really necessary?)
     deinit {
         BGTimer?.invalidate() // invalidate any background timers
-        NotificationCenter.default.removeObserver(self, name: .doHide, object: nil)
-        NotificationCenter.default.removeObserver(self, name: .timeBG, object: nil)
-        NSWorkspace.shared.notificationCenter.removeObserver(self, name: NSWorkspace.activeSpaceDidChangeNotification, object: nil)
-        NSWorkspace.shared.notificationCenter.removeObserver(self, name: NSWorkspace.screensDidWakeNotification, object: nil)
-        NSWorkspace.shared.notificationCenter.removeObserver(self, name: NSWorkspace.screensDidSleepNotification, object: nil)
-        NotificationCenter.default.removeObserver(self, name: NSApplication.didChangeScreenParametersNotification, object: nil)
-        NotificationCenter.default.removeObserver(self, name: .createDesktops, object: nil)
-        NotificationCenter.default.removeObserver(self, name: .updateDesktop, object: nil)
-        NotificationCenter.default.removeObserver(self, name: .updateAllDesktops, object: nil)
-        NotificationCenter.default.removeObserver(self, name: .desktopType, object: nil)
-        myScreen = [:] // and free up screen/window dictionary
+        let WSsharedNC = NSWorkspace.shared.notificationCenter
+        WSsharedNC.removeObserver(self, name: NSWorkspace.activeSpaceDidChangeNotification, object: nil)
+        WSsharedNC.removeObserver(self, name: NSWorkspace.screensDidWakeNotification, object: nil)
+        WSsharedNC.removeObserver(self, name: NSWorkspace.screensDidSleepNotification, object: nil)
+        let NCdefault = NotificationCenter.default
+        NCdefault.removeObserver(self, name: .doHide, object: nil)
+        NCdefault.removeObserver(self, name: .timeBG, object: nil)
+        NCdefault.removeObserver(self, name: NSApplication.didChangeScreenParametersNotification, object: nil)
+        NCdefault.removeObserver(self, name: .createDesktops, object: nil)
+        NCdefault.removeObserver(self, name: .updateDesktop, object: nil)
+        NCdefault.removeObserver(self, name: .updateAllDesktops, object: nil)
+        NCdefault.removeObserver(self, name: .desktopType, object: nil)
+        observation?.invalidate(); myDesktops.removeAll() // and free up screen/window dictionary
     }
 }
-
