@@ -33,9 +33,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var desktopColor : NSColor = .black
     var lastDesktopColor : NSColor = .black
     
-    // Apple doc
-    var observation: NSKeyValueObservation?
-    
     let defaultTimeList = ["Never", "5 seconds", "30 seconds", "1 minute", "5 minutes", "15 minutes", "1 hour"]
     let defaultTimes = [315576000.0, 5.0, 30.0, 60.0, 300.0, 900.0, 3600.0]
     var defaultTime = "Never"
@@ -43,8 +40,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         
         // restore user preferences
-        var noSBI = false
-        if !NSEvent.modifierFlags.contains(.command) { noSBI = setDefaultValues() }
+        if !NSEvent.modifierFlags.contains(.command) { setDefaultValues() }
         else { // reset to defaults
             UserDefaults.standard.set(defaultTime, forKey: "defaultTime")
             UserDefaults.standard.set(sbiHidden, forKey: "sbiHidden")
@@ -52,19 +48,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         
         // construct status bar item (or not!)
-        if noSBI { statusBarItem = nil } else {
-            statusBarItem = setStatusBarItem(image: sbiHidden ? sbiNoPicture : sbiPicture)
-        }
-        
-        // this should capture in/out of Dark Mode
-        if #available(OSX 10.14, *) {
-            observation = NSApp.observe(\.effectiveAppearance) { (app, _) in
-                if self.hider!.hidden { // give 3 second delay to make sure the Desktop did in fact update
-                    Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false, block: { _ in
-                        NotificationCenter.default.post(name: .updateAllDesktops, object: nil) })
-                }
-            }
-        }
+        statusBarItem = setStatusBarItem(image: sbiHidden ? sbiNoPicture : sbiPicture)
         
         // create some Services
         NSApp.servicesProvider = self
@@ -76,17 +60,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // date the app started + 2 second
         startDate = Date(timeIntervalSinceNow: TimeInterval(2.0))
     }
-    // called from Services menu
-    @objc func toggleService(_ pboard: NSPasteboard, userData: String, error: NSErrorPointer) {
-        if Date() > startDate { //hack to see if Service started the app, if so don't toggle since we are already hiding icons
-            toggle(nil)
-        } else {
-            statusBarItem = nil // Services did start the app; just turn off menu
-        }
-    }
     
     func applicationWillTerminate(_ aNotification: Notification) {
-        observation = nil; hider = nil // remove observers
+        hider = nil // remove observers
     }
     
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
@@ -95,6 +71,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             sbiHidden = false
         }
         return false
+    }
+    // called from Services menu
+    @objc func toggleService(_ pboard: NSPasteboard, userData: String, error: NSErrorPointer) {
+        if Date() < startDate { //hack to see if Service started the app
+            statusBarItem = nil // Services did start the app (therefore icons hidden); just turn off menu
+        } else {
+            toggle(nil)         // didn't start app, so toggle icons
+        }
     }
     // construct status bar item
     func setStatusBarItem(image: NSImage? ) -> NSStatusItem? {
@@ -124,11 +108,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         
         menu.addItem(NSMenuItem.separator())
                 
+        // Right or left click for menu?
         let menuClick = NSMenuItem(title: "Right-click to show menu", action: #selector(self.rightClicked(_:)), keyEquivalent: "")
         menuClick.state = defaultClick ? NSControl.StateValue.off : NSControl.StateValue.on
         menu.addItem(menuClick)
         
-        // menu > submenu of Show/Hide or Remove remove
+        // timer > submenu of possible times to update
         let timeSubMenu = NSMenu()
         let timeMenuItem = NSMenuItem() // Change menu > Hid/Show or Remove menu
         timeMenuItem.title = "Check for changing Desktop"
@@ -150,7 +135,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         subMenu.addItem(NSMenuItem(title: "Remove menu", action: #selector(self.removeMenu(_:)), keyEquivalent: ""))
         menu.setSubmenu(subMenu, for: menuItem)
         
-        // menu > submenu of actual Desktop or solid color
+        // desktop menual > submenu of solid color oractual for just this screen or all
         let (currentImage, currentColor, currentlyColored) = hider!.desktopFromPoint(NSEvent.mouseLocation, color: desktopColor)
         let previewSize = NSSize(width: 20, height: 20); lastDesktopColor = currentColor
         let bgSubMenu = NSMenu()
@@ -159,7 +144,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(bgMenuItem)
         let bgT1 = NSMenuItem(title: "This Desktop", action: nil, keyEquivalent: "")
         bgSubMenu.addItem(bgT1)
-        if hider!.numberDesktops > 1 {
+        if hider!.numberOfDesktops > 1 {
             let bgMI = NSMenuItem(title: "actual", action: #selector(self.selectDesktop(_:)), keyEquivalent: "")
             if let desktopImage = currentImage { bgMI.image = NSImage(cgImage: desktopImage, size: previewSize) }
             bgMI.state = !currentlyColored && desktop != .allDesktop && desktop != .allSolidColorDesktop ? NSControl.StateValue.on : NSControl.StateValue.off
@@ -174,6 +159,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             let bgT2 = NSMenuItem(title: "All Desktops", action: nil, keyEquivalent: "")
             bgSubMenu.addItem(bgT2)
         }
+        // note if only one screen (monitor), MenuItem has tags > 2
         let abgMI = NSMenuItem(title: "actual", action: #selector(self.selectDesktop(_:)), keyEquivalent: "")
         if let desktopImage = currentImage { abgMI.image = NSImage(cgImage: desktopImage, size: previewSize) }
         abgMI.state = desktop == .allDesktop ? NSControl.StateValue.on : NSControl.StateValue.off
@@ -200,14 +186,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         return menu
     }
-    @objc func refreshDesktops(_ sender: Any?) {
+    @objc func refreshDesktops(_ sender: Any?) {  // force refresh of hider
         desktop = .allDesktop
         NotificationCenter.default.post(name: .createDesktops, object: nil)
+        NotificationCenter.default.post(name: .desktopType, object: (lastDesktopColor, desktop, NSEvent.mouseLocation))
     }
     @objc func menuDidClose(_ menu: NSMenu) { // teardown menu for next time SBI is clicked
         statusBarItem?.menu = nil
     }
-    @objc func selectDesktop(_ menu: NSMenuItem) {
+    @objc func selectDesktop(_ menu: NSMenuItem) { // selecting if desktop or all desktops are solid color or actual
+        print("in selectDesktop, menu.tag=\(menu.tag)")
         let option = menu.tag as Int
         switch option {
         case 2 :
@@ -216,32 +204,31 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             desktop = .allSolidColorDesktop
         case 3 :
             desktop = .allDesktop
-            NotificationCenter.default.post(name: .desktopType, object: (desktopColor, desktop, NSEvent.mouseLocation))
         default:
             desktop = .desktop
-            NotificationCenter.default.post(name: .desktopType, object: (desktopColor, desktop, NSEvent.mouseLocation))
         }
-        if desktop != .desktop && desktop != .allDesktop {
+        
+        if option == 3 || option == 1 { // no need for color wheel
             NotificationCenter.default.post(name: .desktopType, object: (lastDesktopColor, desktop, NSEvent.mouseLocation))
-            let picker = NSColorPanel.shared
-            picker.color = lastDesktopColor
-            picker.mode = .wheel
-            picker.showsAlpha = false
-            picker.hidesOnDeactivate = false
-            picker.isFloatingPanel = true
-            //picker.isMovableByWindowBackground = true
-            //picker.becomesKeyOnlyIfNeeded = false
-            picker.setTarget(self)
-            picker.setAction(#selector(colorChosen(_:)))
-            picker.color = desktopColor
-            picker.makeKeyAndOrderFront(nil)
+            return
         }
+        // (re)set color wheel
+        let picker = NSColorPanel.shared
+        picker.mode = .wheel
+        picker.showsAlpha = false
+        picker.hidesOnDeactivate = false
+        picker.isFloatingPanel = true
+        picker.setTarget(self)
+        picker.setAction(#selector(colorChosen(_:)))
+        picker.color = lastDesktopColor
+        picker.makeKeyAndOrderFront(nil)
     }
-    @objc func colorChosen(_ picker: NSColorPanel) {
+    @objc func colorChosen(_ picker: NSColorPanel) { // we got a color
         desktopColor = NSColorPanel.shared.color
+        //picker.close()
+        print("in colorChosen \(desktop) \(desktopColor)")
         NotificationCenter.default.post(name: .desktopType, object: (desktopColor, desktop, NSEvent.mouseLocation))
     }
-
     // called when icons should hidden or shown
     @objc func toggle(_ sender: Any?) {
         NotificationCenter.default.post(name: .doHide, object: nil)
@@ -283,12 +270,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         NSApplication.shared.orderFrontStandardAboutPanel(nil)
     }
     // read in user preferences
-    func setDefaultValues() -> Bool {
+    func setDefaultValues() {
         defaultClick = ( UserDefaults.standard.object(forKey: "defaultClick") == nil) ? defaultClick : UserDefaults.standard.bool(forKey: "defaultClick")
         sbiHidden = ( UserDefaults.standard.object(forKey: "sbiHidden") == nil) ? sbiHidden : UserDefaults.standard.bool(forKey: "sbiHidden")
         defaultTime = (( UserDefaults.standard.object(forKey: "defaultTime") == nil) ? defaultTime : UserDefaults.standard.string(forKey: "defaultTime")) ?? defaultTime
         defaultTime = defaultTimeList[defaultTimeList.firstIndex(where: {$0 == defaultTime}) ?? 0] // make sure defaultTime is a valid string
-        return false
     }
 }
 
