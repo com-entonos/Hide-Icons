@@ -52,7 +52,7 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
             }
             self.contentView = imageView
             if !hidden { self.orderOut(nil) }  // showing desktop, don't show this window at all
-            print("in setWin, cgID=\(self.cgID), onScreen=\(onScreen), hidden=\(hidden), stationary?\(self.collectionBehavior == .stationary), screen.frame==frame?\(self.screen?.frame == self.frame)")
+            //print("in setWin, cgID=\(self.cgID), onScreen=\(onScreen), hidden=\(hidden), stationary?\(self.collectionBehavior == .stationary), screen.frame==frame?\(self.screen?.frame == self.frame)")
         }
     }
     
@@ -68,7 +68,7 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         set (value) { hidden_ = value }
     }
     // hide or show Desktop icons
-    func doHide() { print("in doHide, hidden=\(!hidden), empty myDesktops?\(myDesktops.isEmpty)")
+    func doHide() { //print("in doHide, hidden=\(!hidden), empty myDesktops?\(myDesktops.isEmpty)")
         hidden = !hidden        // toggle hide/show icons
         if hidden {             // appears the user want to hide icons
             for (_, win) in myDesktops {
@@ -81,14 +81,14 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         }
     }
     // start a repeating timer to update all Desktops
-    func doTimer() { print("in doTimer, BGTime=\(BGTime), valid?\(BGTime < 720000.0)")
+    func doTimer() { //print("in doTimer, BGTime=\(BGTime), valid?\(BGTime < 720000.0)")
         BGTimer?.invalidate()
         if BGTime < 720000.0 {  // only start timer if time interval is less than 200 hours
             BGTimer = Timer.scheduledTimer(withTimeInterval: BGTime, repeats: true, block: { _ in self.updateDesktops(true) })
         }
     }
     // called when user changes the repeating timer interval
-    @objc func timerChanged(_ notifier : Notification) { print("in timerChanged, TimeInterval=\(notifier.object as! TimeInterval)")
+    @objc func timerChanged(_ notifier : Notification) { //print("in timerChanged, TimeInterval=\(notifier.object as! TimeInterval)")
         if let time = notifier.object as? TimeInterval {
             BGTime = time
             if hidden { doTimer() }         // only start timer if icons are hidden
@@ -98,7 +98,7 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
 
     func updateDesktops(_ doAll : Bool = false) {  // update pictures of Desktop(s)
         BGTimer?.invalidate()           // stop any timers
-        print("updateDesktops, doAll=\(doAll) number of myDesktops:\(myDesktops.count), screens:\(Set(myDesktops.map({$0.value.screen})).count)")
+        //print("updateDesktops, doAll=\(doAll) number of myDesktops:\(myDesktops.count), screens:\(Set(myDesktops.map({$0.value.screen})).count)")
         
         for cgWin in getDesktopArray(doAll ? .optionAll: .optionOnScreenOnly) {
             if let win = myDesktops[cgWin] {
@@ -114,10 +114,10 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
                     let imageView = NSImageView(image: image)
                     win.setWin(imageView: imageView, onScreen: onScreen, hidden: hidden)
                 }
-            } else {print("oh no- \(cgWin) is not in MyDesktops!")}
+            }// else {print("oh no- \(cgWin) is not in MyDesktops!")}
         }
         doTimer()                                           // restart any timers
-        print("number of myDesktops:\(myDesktops.count), screens:\(Set(myDesktops.map({$0.value.screen})).count)")
+        //print("number of myDesktops:\(myDesktops.count), screens:\(Set(myDesktops.map({$0.value.screen})).count)")
     }
     
     func getDesktopArray(_ option: CGWindowListOption = .optionAll) -> [CGWindowID] {
@@ -142,12 +142,10 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         return CFArrayCreate(kCFAllocatorDefault, pointer, desktopCGID.count, nil)  // there it is. used in CGWindowListCreateDescriptionFromArray call
     }
     
-    func createDesktops() {      // make window for each desktop
+    func createDesktops() { //print("createDesktops, myDesktop.count=\(myDesktops.count)")     // make window for each desktop
         BGTimer?.invalidate()   // stop any timer
         let h0 = NSHeight((NSScreen.screens.filter({$0.frame.origin == CGPoint.zero}).first?.frame)!)   // height of Screen that has menu bar
         
-        print("createDesktops, myDesktop.count=\(myDesktops.count)")
-
         for desktopWindows in CGWindowListCreateDescriptionFromArray(getDesktopCGWindowID()) as! [[String : AnyObject]] { // loop over CGWindows that are Desktops...
             let rectCG = CGRect(dictionaryRepresentation: desktopWindows[kCGWindowBounds as String] as! CFDictionary)!
             let origin = CGPoint(x: rectCG.origin.x, y: h0 - rectCG.origin.y - rectCG.height)
@@ -172,7 +170,7 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
                 }
             }
         }
-        print("number of myDesktops:\(myDesktops.count), screens:\(Set(myDesktops.map({$0.value.screen})).count)")
+        //print("number of myDesktops:\(myDesktops.count), screens:\(Set(myDesktops.map({$0.value.screen})).count)")
     }
     // number of Desktops
     var numberOfDesktops: Int {
@@ -211,9 +209,9 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
     // screens either slept or awoke
     @objc func screensDidSleepWake(_ notifier: Notification) {
         if notifier.name == NSWorkspace.screensDidWakeNotification {// if awake, update all windows & start timers
-            Timer.scheduledTimer(withTimeInterval: 2.0, repeats: false, block: { _ in self.updateDesktops(true) }); print("didWake")
+            Timer.scheduledTimer(withTimeInterval: 2.0, repeats: false, block: { _ in self.updateDesktops(true) })//; print("didWake")
         } else {
-            BGTimer?.invalidate(); print("didSleep")
+            BGTimer?.invalidate()//; print("didSleep")
         }
     }
     // set up initial window lists for each screen and observers
@@ -225,14 +223,16 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         NCdefault.addObserver(self, selector: #selector(self.timerChanged(_:)), name: .timeBG, object: nil)             // catch background timer interval
         NCdefault.addObserver(self, selector: #selector(self.desktopTypeChange(_:)), name: .desktopType, object: nil)   // desktops are actual or solid color, for one or all
         NCdefault.addObserver(forName: .createDesktops, object: nil, queue: OperationQueue.current, using: { not in self.createDesktops() })
-        NCdefault.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: OperationQueue.current, using: {_ in self.createDesktops()})
+        NCdefault.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: OperationQueue.current, using: {_ in //print("didChangeScreenParameters");
+            self.createDesktops()})
         NCdefault.addObserver(forName: .updateDesktop, object: nil, queue: OperationQueue.current, using: { _ in self.updateDesktops(false)})
         NCdefault.addObserver(forName: .updateAllDesktops, object: nil, queue: OperationQueue.current, using: { _ in self.updateDesktops(true)})
         NCdefault.addObserver(forName: .doHide, object: nil, queue: OperationQueue.current, using: {_ in self.doHide() })
         let WSsharedNC = NSWorkspace.shared.notificationCenter
         WSsharedNC.addObserver(self, selector: #selector(screensDidSleepWake(_:)), name: NSWorkspace.screensDidSleepNotification, object: nil)
         WSsharedNC.addObserver(self, selector: #selector(screensDidSleepWake(_:)), name: NSWorkspace.screensDidWakeNotification, object: nil)
-        WSsharedNC.addObserver(forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: OperationQueue.current, using: { _ in usleep(150_000); self.updateDesktops(false)}) //ugh! FIXME apple
+        WSsharedNC.addObserver(forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: OperationQueue.current, using: { _ in //print("activeSpaceDidChange")
+            usleep(150_000);  self.updateDesktops(false)}) //ugh! FIXME apple
         
         // this should capture in/out of Dark Mode
         if #available(OSX 10.14, *) {

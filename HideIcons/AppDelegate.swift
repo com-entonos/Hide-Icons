@@ -194,8 +194,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc func menuDidClose(_ menu: NSMenu) { // teardown menu for next time SBI is clicked
         statusBarItem?.menu = nil
     }
-    @objc func selectDesktop(_ menu: NSMenuItem) { // selecting if desktop or all desktops are solid color or actual
-        print("in selectDesktop, menu.tag=\(menu.tag)")
+    @objc func selectDesktop(_ menu: NSMenuItem) { //print("in selectDesktop, menu.tag=\(menu.tag)") // selecting if desktop or all desktops are solid color or actual
         let option = menu.tag as Int
         switch option {
         case 2 :
@@ -224,9 +223,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         picker.makeKeyAndOrderFront(nil)
     }
     @objc func colorChosen(_ picker: NSColorPanel) { // we got a color
-        desktopColor = NSColorPanel.shared.color
-        //picker.close()
-        print("in colorChosen \(desktop) \(desktopColor)")
+        desktopColor = NSColorPanel.shared.color //; print("in colorChosen \(desktop) \(desktopColor)")
         NotificationCenter.default.post(name: .desktopType, object: (desktopColor, desktop, NSEvent.mouseLocation))
     }
     // called when icons should hidden or shown
