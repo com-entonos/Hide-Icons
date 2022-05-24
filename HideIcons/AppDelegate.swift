@@ -207,7 +207,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             desktop = .desktop
         }
         
-        if option == 3 || option == 1 { // no need for color wheel
+        if option % 2 == 1 { // no need for color wheel
             NotificationCenter.default.post(name: .desktopType, object: (lastDesktopColor, desktop, NSEvent.mouseLocation))
             return
         }
