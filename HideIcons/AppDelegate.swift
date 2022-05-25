@@ -72,6 +72,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         return false
     }
+    
+    @objc func powerOff(notification: NSNotification) { // does this catch logoff, restart and shutdown?
+        NSApplication.shared.terminate(self)
+    }
     // called from Services menu
     @objc func toggleService(_ pboard: NSPasteboard, userData: String, error: NSErrorPointer) {
         if Date() < startDate { //hack to see if Service started the app
