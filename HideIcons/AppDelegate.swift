@@ -222,6 +222,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         picker.setTarget(self)
         picker.setAction(#selector(colorChosen(_:)))
         picker.color = lastDesktopColor
+        picker.collectionBehavior = .canJoinAllSpaces
         picker.makeKeyAndOrderFront(nil)
     }
     @objc func colorChosen(_ picker: NSColorPanel) { // we got a color
