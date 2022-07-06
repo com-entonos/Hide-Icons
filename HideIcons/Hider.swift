@@ -52,12 +52,12 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         }
     }
     
-    var myDesktops : [ CGWindowID : MyWindow] = [:] //
-    var backupDesktops : [ MyWindow] = []
-    var BGTimer : Timer?                        // lazy update for Desktop pics
-    var BGTime = TimeInterval(730000.0)         // time interveral for lazy updates
-    var hidden_ = false                         // are icons hidden?
-    var observation: NSKeyValueObservation?     // Apple doc- to detect dark/light mode switch
+    private var myDesktops : [ CGWindowID : MyWindow] = [:] //
+    private var backupDesktops : [ MyWindow] = []
+    private var BGTimer : Timer?                        // lazy update for Desktop pics
+    private var BGTime = TimeInterval(730000.0)         // time interveral for lazy updates
+    private var hidden_ = false                         // are icons hidden?
+    private var observation: NSKeyValueObservation?     // Apple doc- to detect dark/light mode switch
     
     var hidden: Bool {                          // are icons currently hidden?
         get { return hidden_ }
@@ -98,10 +98,9 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         BGTimer?.invalidate()           // stop any timers
         //print("updateDesktops, doAll=\(doAll) number of myDesktops:\(myDesktops.count), screens:\(Set(myDesktops.map({$0.value.screen})).count)")
         
-        for cgWin in getDesktopArray(doAll ? .optionAll: .optionOnScreenOnly) {
-            if let win = myDesktops[cgWin] {
-                let desc = (CGWindowListCreateDescriptionFromArray(win.cgIDCF) as! [[String : AnyObject]]).last
-                let onScreen = desc![kCGWindowIsOnscreen as String] as? Bool ?? false
+        let dict = getDesktopArray(doAll ? .optionAll: .optionOnScreenOnly)
+        for (cgWin, onScreen) in dict.map({ ($0[kCGWindowNumber as String] as! CGWindowID, $0[kCGWindowIsOnscreen as String] as? Bool ?? false)}) {
+            if let win = myDesktops[cgWin] { //print("cgWin=\(cgWin), onScreen=\(onScreen), stationary?\(myDesktops[cgWin]?.collectionBehavior == .stationary)")
                 setImageView(cgWin: cgWin, win: win, onScreen: onScreen)
             }// else {print("    OOPS- \(cgWin) is not in MyDesktops!")}
         }
@@ -122,36 +121,30 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         }
     }
     
-    func getDesktopArray(_ option: CGWindowListOption = .optionAll) -> [CGWindowID] {
-        // need to find Desktop windows... (let's use apple's approved way so we don't trip up security guards)
-        let windows = CGWindowListCopyWindowInfo([option], kCGNullWindowID)! as! [[String: AnyObject]]  // get (all or onscreen) windows
-        let desktopWindowLevel = CGWindowLevelForKey(.desktopWindow) - 1                                    // level of Desktop background image
-        let desktopWindows = windows.filter {
-            let windowLevel = $0[kCGWindowLayer as String] as! CGWindowLevel
-            return windowLevel == desktopWindowLevel
-        }
-        var screenRect: [CGRect] = []
-        let numOnScreen = desktopWindows.reduce(0) { numOnScreen, window in             // find the number of desktops onScreen and also construct array of unique screen CGRects
-            let rect = CGRect(dictionaryRepresentation: window[kCGWindowBounds as String] as! CFDictionary)!
-            if !screenRect.contains(rect) { screenRect.append(rect)}
-            let onScreen = window[kCGWindowIsOnscreen as String] as? Bool ?? false
-            return numOnScreen + (onScreen ? 1 : 0)
-        }
-        if numOnScreen != screenRect.count {// ensure the number of onScreen Desktops == number of screens, otherwise try again...
-            usleep(150_000); return getDesktopArray(option)
-        }
-        return desktopWindows.map { $0[kCGWindowNumber as String] as! CGWindowID}       // array of CGWindowID that are Desktop windows
-    }
-    
-    func getDesktopCGWindowID(_ option: CGWindowListOption = .optionAll) -> CFArray? {
-        let desktopCGID = getDesktopArray(option)              // array of CGWindowID for (all or onscreen) Desktops
-
-        // now create a CFArray with all the CGWindowID that are Desktop pictures
-        let pointer = UnsafeMutablePointer<UnsafeRawPointer?>.allocate(capacity: desktopCGID.count)
-        for (index, win) in desktopCGID.reversed().enumerated() {       // we reverse simply so when we create the windows, they stack up in a way that makes more sense
-            pointer[index] = UnsafeRawPointer(bitPattern: UInt(win))
-        }
-        return CFArrayCreate(kCFAllocatorDefault, pointer, desktopCGID.count, nil)  // there it is. used in CGWindowListCreateDescriptionFromArray call
+    func getDesktopArray(_ option: CGWindowListOption = .optionAll) -> [[String: AnyObject]] {
+        var nTry = 0
+        repeat {
+            // need to find Desktop windows... (let's use apple's approved way so we don't trip up security guards)
+            let windows = CGWindowListCopyWindowInfo([option], kCGNullWindowID)! as! [[String: AnyObject]]  // get (all or onscreen) windows
+            let desktopWindowLevel = CGWindowLevelForKey(.desktopWindow) - 1                                // level of Desktop background image
+            let desktopWindows = windows.filter {                                                           // get array of dictionaries for Desktop CGWindows
+                let windowLevel = $0[kCGWindowLayer as String] as! CGWindowLevel
+                return windowLevel == desktopWindowLevel
+            }
+            var screenRect: [CGRect] = []
+            let numOnScreen = desktopWindows.reduce(0) { numOnScreen, window in             // find the number of desktops onScreen and also construct array of unique screen CGRects
+                let rect = CGRect(dictionaryRepresentation: window[kCGWindowBounds as String] as! CFDictionary)!
+                if !screenRect.contains(rect) { screenRect.append(rect)}
+                let onScreen = window[kCGWindowIsOnscreen as String] as? Bool ?? false
+                return numOnScreen + (onScreen ? 1 : 0)
+            }
+            let n = screenRect.count
+            let good = n == NSScreen.screens.count || n == backupDesktops.count || n == backupDesktops.filter({$0.beingUsed}).count
+            //print("numOnScreen=\(numOnScreen), screenRect.count=\(screenRect.count), backup.count=\(backupDesktops.filter({return $0.beingUsed}).count), screens.count=\(NSScreen.screens.count), good=\(good), nTry=\(nTry)")
+            if (numOnScreen == screenRect.count && good) || nTry > 20 { return desktopWindows }
+            usleep(150_000)
+            nTry += 1   // FIX ME?
+        } while true
     }
     
     func createDesktops() { //print("createDesktops, myDesktop.count=\(myDesktops.count)")     // make window for each desktop
@@ -159,11 +152,12 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         let h0 = NSHeight((NSScreen.screens.filter({$0.frame.origin == CGPoint.zero}).first?.frame)!)   // height of Screen that has menu bar
         
         myDesktops.forEach({ desktop in desktop.value.beingUsed = false })                              // assume window is not going to be used
-        for desktopWindows in CGWindowListCreateDescriptionFromArray(getDesktopCGWindowID()) as! [[String : AnyObject]] { // loop over CGWindows that are Desktops...
+        for desktopWindows in getDesktopArray() {   // loop over CGWindows that are Desktops...
             let rectCG = CGRect(dictionaryRepresentation: desktopWindows[kCGWindowBounds as String] as! CFDictionary)!
             let origin = CGPoint(x: rectCG.origin.x, y: h0 - rectCG.origin.y - rectCG.height)
             let rect = CGRect(origin: origin, size: rectCG.size)            // CGrect is in Screen coordinates
             let cgID = desktopWindows[kCGWindowNumber as String] as! CGWindowID
+            //print("is cgID not in myDesktops? \(myDesktops[cgID]==nil)")
             if let win = myDesktops[cgID] {
                 win.reset(contentRect: rect)
             } else {
@@ -171,8 +165,11 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
             }
             let onScreen = desktopWindows[kCGWindowIsOnscreen as String] as? Bool ?? false
             setImageView(cgWin: cgID, win: myDesktops[cgID]!, onScreen: onScreen)
+            //print("cgID=\(cgID), onScreen=\(onScreen), stationary?\(myDesktops[cgID]?.collectionBehavior == .stationary)")
         }
+        //print("number of myDesktops:\(myDesktops.count)")
         for cgID in myDesktops.filter({ return !$0.value.beingUsed}).keys { myDesktops[cgID]?.orderOut(nil); myDesktops.removeValue(forKey: cgID)}   // remove any myDesktops that are not being used
+        //print("number of myDesktops:\(myDesktops.count)")
         
         backupDesktops.forEach({ desktop in desktop.beingUsed = false})
         var screenRect: [CGRect] = []
@@ -189,6 +186,7 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
                 setImageView(cgWin: cgID, win: backupDesktops[idx-1], onScreen: false)
             }
         }
+        //print("number of backupDesktops:\(backupDesktops.count), \(backupDesktops.filter({return $0.beingUsed}).count)")
         for win in backupDesktops.filter({return !$0.beingUsed}) { win.orderOut(nil)}   // move any backupDesktops out of the window level if not being used
         doTimer()
         //print("number of myDesktops:\(myDesktops.count), screens:\(Set(myDesktops.map({$0.value.screen})).count)")
@@ -200,7 +198,7 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
     // given a point on screen, return the Desktop image and color
     func desktopFromPoint(_ point : CGPoint, color : NSColor) -> (CGImage?, NSColor, Bool) {
         for screen in NSScreen.screens.filter({$0.frame.contains(point)}) {
-            for cgID in getDesktopArray(.optionOnScreenOnly) {
+            for cgID in getDesktopArray(.optionOnScreenOnly).map({ $0[kCGWindowNumber as String] as! CGWindowID}) {
                 if myDesktops[cgID]?.screen == screen {
                     guard let cgImage = CGWindowListCreateImage(.null, [.optionIncludingWindow], cgID, [.nominalResolution]) else { continue }
                     return (cgImage, myDesktops[cgID]!.color ?? color, myDesktops[cgID]!.color != nil)
@@ -216,7 +214,7 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         switch desktop {
         case .solidColorDesktop, .desktop: // one Desktop is either getting a solid color or the actual Desktop, find it
             for screen in NSScreen.screens.filter({$0.frame.contains(mousePoint)}) { // only if the mouse click was on this screen
-                for cgID in getDesktopArray(.optionOnScreenOnly) {
+                for cgID in getDesktopArray(.optionOnScreenOnly).map({ $0[kCGWindowNumber as String] as! CGWindowID}) {
                     if myDesktops[cgID]?.screen == screen { myDesktops[cgID]!.color = (desktop == .solidColorDesktop) ? color :  nil }
                 }
             }
@@ -246,7 +244,7 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         NCdefault.addObserver(self, selector: #selector(self.desktopTypeChange(_:)), name: .desktopType, object: nil)   // desktops are actual or solid color, for one or all
         NCdefault.addObserver(forName: .createDesktops, object: nil, queue: OperationQueue.current, using: { not in self.createDesktops() })
         NCdefault.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: OperationQueue.current, using: {_ in //print("didChangeScreenParameters");
-            usleep(500_000); self.createDesktops()})
+            self.BGTimer?.invalidate(); usleep(500_000); self.createDesktops()})
         NCdefault.addObserver(forName: .updateDesktop, object: nil, queue: OperationQueue.current, using: { _ in self.updateDesktops()})
         NCdefault.addObserver(forName: .updateAllDesktops, object: nil, queue: OperationQueue.current, using: { _ in self.updateDesktops(true)})
         NCdefault.addObserver(forName: .doHide, object: nil, queue: OperationQueue.current, using: {_ in self.doHide() })
@@ -254,7 +252,7 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         WSsharedNC.addObserver(self, selector: #selector(screensDidSleepWake(_:)), name: NSWorkspace.screensDidSleepNotification, object: nil)
         WSsharedNC.addObserver(self, selector: #selector(screensDidSleepWake(_:)), name: NSWorkspace.screensDidWakeNotification, object: nil)
         WSsharedNC.addObserver(forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: OperationQueue.current, using: { _ in //print("activeSpaceDidChange")
-            usleep(150_000);  self.updateDesktops(true)}) //ugh! FIXME apple
+            self.BGTimer?.invalidate(); usleep(150_000);  self.updateDesktops(true)}) //ugh! FIXME apple
         
         // this should capture in/out of Dark Mode
         if #available(OSX 10.14, *) {
@@ -267,7 +265,7 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
     }
     // tear down observers (is this really necessary?)
     deinit {
-        BGTimer?.invalidate() // invalidate any background timers
+        observation?.invalidate(); BGTimer?.invalidate() // invalidate any background timers
         let WSsharedNC = NSWorkspace.shared.notificationCenter
         WSsharedNC.removeObserver(self, name: NSWorkspace.activeSpaceDidChangeNotification, object: nil)
         WSsharedNC.removeObserver(self, name: NSWorkspace.screensDidWakeNotification, object: nil)
@@ -280,6 +278,6 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         NCdefault.removeObserver(self, name: .updateDesktop, object: nil)
         NCdefault.removeObserver(self, name: .updateAllDesktops, object: nil)
         NCdefault.removeObserver(self, name: .desktopType, object: nil)
-        observation?.invalidate(); myDesktops.removeAll() // and free up screen/window dictionary
+        myDesktops.removeAll(); backupDesktops.removeAll() // and free up screen/window dictionary
     }
 }
