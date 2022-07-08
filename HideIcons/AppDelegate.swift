@@ -37,7 +37,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     let defaultTimes = [315576000.0, 5.0, 30.0, 60.0, 300.0, 900.0, 3600.0]
     var defaultTime = "Never"
     
+    var version = "0.0.0"
+    let appStore = false
+    
     func applicationDidFinishLaunching(_ aNotification: Notification) {
+        
+        version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as! String
+        //print("version: \(version), in preferences: \(UserDefaults.standard.string(forKey: "donate")), appStore=\(appStore)")
         
         // restore user preferences
         if !NSEvent.modifierFlags.contains(.command) { setDefaultValues() }
@@ -183,7 +189,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Help", action: #selector(self.getHelp(_:)), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "About", action: #selector(self.about(_:)), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "Say \"Hi\" to entonos", action: #selector(self.donateClicked(_:)), keyEquivalent: ""))
+        
+        let noDonate = (( UserDefaults.standard.object(forKey: "donate") == nil) ? appStore : UserDefaults.standard.string(forKey: "donate") == version)
+        if noDonate { // for App Store
+            menu.addItem(NSMenuItem(title: "Say \"Hi\" to entonos", action: #selector(self.donateClicked(_:)), keyEquivalent: ""))
+        } else {
+            let donateItem = NSMenuItem(title: "Donate...", action: #selector(self.donateClicked(_:)), keyEquivalent: "")
+            donateItem.attributedTitle = NSAttributedString(string: "Donate...", attributes: [NSAttributedString.Key.foregroundColor: NSColor.red])
+            menu.addItem(donateItem)
+        }
         
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: ""))
@@ -262,8 +276,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
     // say "Hi"
     @objc func donateClicked(_ sender: Any?) {
-        NSWorkspace.shared.open(URL(string: "https://entonos.com/index.php/the-geek-shop/")!) // NO via Apple because of paypal donate link. apple's math is about as good as their physics engine (i.e. 30% of 0 is still 0)
-        //NSWorkspace.shared.open(URL(string: "https://entonos.com/")!)
+        let noDonate = (( UserDefaults.standard.object(forKey: "donate") == nil) ? appStore : UserDefaults.standard.string(forKey: "donate") == version)
+        if noDonate {
+            let url = URL(string: "https://entonos.com/index.php/the-geek-shop/")
+            //let url = URL(string: "https://entonos.com/")
+            NSWorkspace.shared.open(url!)
+        } else {    // NO via Apple because of paypal donate link. apple's math is about as good as their physics engine (i.e. 30% of 0 is still 0)
+            let url = URL(string: "http://www.parker9.com/d")
+            NSWorkspace.shared.open(url!)
+            UserDefaults.standard.set(version, forKey: "donate")
+        }
     }
     
     @objc func about(_ sender: Any?) {
