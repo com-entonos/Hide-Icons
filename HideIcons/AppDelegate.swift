@@ -38,7 +38,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var defaultTime = "Never"
     
     var version = "0.0.0"
-    let appStore = false
+    let appStore = false    // this app destined to macOS App Store?
     
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         
@@ -190,7 +190,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(NSMenuItem(title: "Help", action: #selector(self.getHelp(_:)), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "About", action: #selector(self.about(_:)), keyEquivalent: ""))
         
-        let noDonate = (( UserDefaults.standard.object(forKey: "donate") == nil) ? appStore : UserDefaults.standard.string(forKey: "donate") == version)
+        let noDonate = UserDefaults.standard.object(forKey: "donate") == nil ? appStore : UserDefaults.standard.string(forKey: "donate") == version
         if noDonate { // for App Store
             menu.addItem(NSMenuItem(title: "Say \"Hi\" to entonos", action: #selector(self.donateClicked(_:)), keyEquivalent: ""))
         } else {
@@ -276,7 +276,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
     // say "Hi"
     @objc func donateClicked(_ sender: Any?) {
-        let noDonate = (( UserDefaults.standard.object(forKey: "donate") == nil) ? appStore : UserDefaults.standard.string(forKey: "donate") == version)
+        let noDonate = UserDefaults.standard.object(forKey: "donate") == nil ? appStore : UserDefaults.standard.string(forKey: "donate") == version
         if noDonate {
             let url = URL(string: "https://entonos.com/index.php/the-geek-shop/")
             //let url = URL(string: "https://entonos.com/")
