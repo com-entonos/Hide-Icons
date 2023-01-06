@@ -117,7 +117,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(NSMenuItem(title: str, action: #selector(self.toggle(_:)), keyEquivalent: ""))
         
         menu.addItem(NSMenuItem.separator())
-                
+
         // Right or left click for menu?
         let menuClick = NSMenuItem(title: "Right-click to show menu", action: #selector(self.rightClicked(_:)), keyEquivalent: "")
         menuClick.state = defaultClick ? NSControl.StateValue.off : NSControl.StateValue.on
@@ -146,6 +146,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.setSubmenu(subMenu, for: menuItem)
         
         // desktop menual > submenu of solid color oractual for just this screen or all
+        if hidden {
         let (currentImage, currentColor, currentlyColored) = hider!.desktopFromPoint(NSEvent.mouseLocation, color: desktopColor)
         let previewSize = NSSize(width: 20, height: 20); lastDesktopColor = currentColor
         let bgSubMenu = NSMenu()
@@ -185,6 +186,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(NSMenuItem.separator())
         
         menu.addItem(NSMenuItem(title: "Force Desktop refresh", action: #selector(self.refreshDesktops(_:)), keyEquivalent: ""))
+        }
         
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Help", action: #selector(self.getHelp(_:)), keyEquivalent: ""))
