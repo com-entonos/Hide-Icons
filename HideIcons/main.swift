@@ -5,7 +5,6 @@
 //  Created by G.J. Parker on 12/27/21.
 //
 
-import Foundation
 import Cocoa
 
 let app = NSApplication.shared
