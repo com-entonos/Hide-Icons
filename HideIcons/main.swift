@@ -2,13 +2,17 @@
 //  main.swift
 //  Hide Icons
 //
-//  Created by G.J. Parker on 12/27/21.
+//  Created by G.J. Parker on 16/09/23.
 //
 
+
 import Cocoa
-
 let app = NSApplication.shared
-let delegate = AppDelegate()
-app.delegate = delegate
 
-_ = NSApplicationMain(CommandLine.argc, CommandLine.unsafeArgv)
+autoreleasepool {
+    let delegate = AppDelegate()
+    withExtendedLifetime(delegate, {
+        app.delegate = delegate
+        _ = NSApplicationMain(CommandLine.argc, CommandLine.unsafeArgv)
+    })
+}
