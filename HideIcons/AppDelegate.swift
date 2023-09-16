@@ -211,7 +211,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 downloadItem.attributedTitle = NSAttributedString(string: updateAvailable.last!, attributes: [NSAttributedString.Key.foregroundColor: NSColor.red])
                 menu.addItem(downloadItem)
             } else if !updateDownloaded {
-                menu.addItem(NSMenuItem(title: "Check for Update...", action: #selector(self.checkUpdate(_:)), keyEquivalent: ""))
+                menu.addItem(NSMenuItem(title: "Check for update...", action: #selector(self.checkUpdate(_:)), keyEquivalent: ""))
             } else {
                 let noUpdate = NSMenuItem(title: "No update available", action: nil, keyEquivalent: "")
                 noUpdate.isEnabled = false
