@@ -48,7 +48,7 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         func setWin(imageView: NSImageView, onScreen: Bool, hidden: Bool) { // update picture and pin if we found the correct Space
             self.contentView = imageView
             if onScreen && !self.collectionBehavior.contains(.stationary) {
-                //if #available(macOS 13.0, *) { self.collectionBehavior = [.stationary, .canJoinAllApplications, .fullScreenNone, .ignoresCycle] } else { self.collectionBehavior = [.stationary, .fullScreenNone, .ignoresCycle] }   // pin this window to this Space
+                // pin this window to this Space
                 self.collectionBehavior = [.stationary, .fullScreenNone, .ignoresCycle]
                 self.level = hidden ? .staticLayer : .hiddenLayer //; print("set")    // move to top of this level
             }
@@ -97,7 +97,7 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
 
     func updateDesktops(_ doAll : Bool = false) {  // update pictures of Desktop(s)
         BGTimer?.invalidate()           // stop any timers
-        //print("updateDesktops, doAll=\(doAll) number of myDesktops:\(myDesktops.count), screens:\(Set(myDesktops.map({$0.value.screen})).count)")
+        //print("updateDesktops, doAll=\(doAll) number of myDesktops:\(myDesktops.count), screens:\(Set(myDesktops.map({$0.value.screen})).count) (\(myDesktops.reduce(0) {n, w in return n + (w.value.screen != nil ? 1 : 0)}))  (\(NSScreen.screens.count)) number of CGDesktop on screen: \(getDesktopArray().reduce(0) { numOnScreen, window in let onScreen = window[kCGWindowIsOnscreen as String] as? Bool ?? false; return numOnScreen + (onScreen ? 1 : 0)})")
         
         let dict = getDesktopArray(doAll ? .optionAll: .optionOnScreenOnly)
         for (cgWin, onScreen) in dict.map({ ($0[kCGWindowNumber as String] as! CGWindowID, $0[kCGWindowIsOnscreen as String] as? Bool ?? false)}) {
@@ -111,8 +111,10 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
     
     func setImageView(cgWin: CGWindowID, win : MyWindow, onScreen : Bool) {
         if let color = win.color {
-            let image = NSImage.swatchWithColor(color: color, size: win.frame.size)
+ //           let image = NSImage.swatchWithColor(color: color, size: win.frame.size) // this too way too much memory, do 1x1 and the scaleAxesIndependently to fill in full desktop
+            let image = NSImage.swatchWithColor(color: color, size: NSSize(width: 1, height: 1))
             let imageView = NSImageView(image: image)
+            imageView.imageScaling = .scaleAxesIndependently
             win.setWin(imageView: imageView, onScreen: onScreen, hidden: hidden)
         } else {
             guard let cgImage = CGWindowListCreateImage(CGRectNull, [.optionIncludingWindow], cgWin, [.nominalResolution]) else { return }
@@ -186,10 +188,12 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         }
         //print("number of myDesktops:\(myDesktops.count), \(NSScreen.screens.count)")
         for cgID in myDesktops.filter({ return !$0.value.beingUsed}).keys { //print(cgID,myDesktops[cgID]!.frame,myDesktops[cgID]!.beingUsed)   // remove any myDesktops that are not being used
-            myDesktops[cgID]?.orderOut(nil); myDesktops.removeValue(forKey: cgID)    //?.close()
+            myDesktops[cgID]?.orderOut(nil); myDesktops.removeValue(forKey: cgID)//if let myD = myDesktops.removeValue(forKey: cgID) {myD.close()}    //?.close()
         }   //;print("number of myDesktops:\(myDesktops.count), \(NSScreen.screens.count)")
         myDesktops.forEach({_, win in win.orderFrontRegardless()})
 
+        //getDesktopArray().reduce(0,{$1[kCGWindowIsOnscreen as String] as? Bool ?? false})
+        //print("createDesktops, myDesktop.count=\(myDesktops.count) (\(myDesktops.reduce(0) {n, w in return n + (w.value.screen != nil ? 1 : 0)})) number of CGDesktop on screen: \(getDesktopArray().reduce(0) { numOnScreen, window in let onScreen = window[kCGWindowIsOnscreen as String] as? Bool ?? false; return numOnScreen + (onScreen ? 1 : 0)}) number of monitors: \(Set(myDesktops.map({$0.value.screen})).count)")
         doTimer()
         //print("number of myDesktops:\(myDesktops.count), screens:\(Set(myDesktops.map({$0.value.screen})).count)")
     }
