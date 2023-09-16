@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSDownloadsFolderUsageDescriptionNSDownloadsFolderUsageDescription</key>
+	<string>So we can download a new version of Hide Icons.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleExecutable</key>
@@ -31,7 +33,7 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>LSUIPresentationMode</key>
-	<real>0.0</real>
+	<real>0</real>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2023 G.J. Parker (entonos)</string>
 	<key>NSPrincipalClass</key>
