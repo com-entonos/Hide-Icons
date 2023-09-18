@@ -42,12 +42,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     let appStore = false    // this app destined to macOS App Store?
     var updateAvailable = [String]()
     var updateDownloaded = false
+    var updateMenuItem = "Check for update..."
     
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         
         // get version of this app
         version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as! String
-        //version = "2.1"
+        //version = "2.1.1"
         
         // restore user preferences
         if !NSEvent.modifierFlags.contains(.command) { setDefaultValues() }
@@ -207,16 +208,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if !appStore {
             menu.addItem(NSMenuItem.separator())
             if updateAvailable.count > 1 {
-                let downloadItem = NSMenuItem(title: updateAvailable.last!, action: #selector(self.downloadClicked(_:)), keyEquivalent: "")
-                downloadItem.attributedTitle = NSAttributedString(string: updateAvailable.last!, attributes: [NSAttributedString.Key.foregroundColor: NSColor.red])
+                let downloadItem = NSMenuItem(title: updateMenuItem, action: #selector(self.downloadClicked(_:)), keyEquivalent: "")
+                downloadItem.attributedTitle = NSAttributedString(string: updateMenuItem, attributes: [NSAttributedString.Key.foregroundColor: NSColor.red])
                 menu.addItem(downloadItem)
             } else if !updateDownloaded {
-                menu.addItem(NSMenuItem(title: "Check for update...", action: #selector(self.checkUpdate(_:)), keyEquivalent: ""))
+                menu.addItem(NSMenuItem(title: updateMenuItem, action: #selector(self.checkUpdate(_:)), keyEquivalent: ""))
             } else {
-                let noUpdate = NSMenuItem(title: "No update available", action: nil, keyEquivalent: "")
+                let noUpdate = NSMenuItem(title: updateMenuItem, action: nil, keyEquivalent: "")
                 noUpdate.isEnabled = false
                 menu.addItem(noUpdate)
-                Timer.scheduledTimer(withTimeInterval: 15*60, repeats: false) { (timer) in self.updateDownloaded = false } // allow for checking in 15 minutes...
+                Timer.scheduledTimer(withTimeInterval: 5*60, repeats: false) { (timer) in self.updateDownloaded = false; self.updateMenuItem = "Check for update..." } // allow for checking in 15 minutes...
             }
         }
         
@@ -320,23 +321,28 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
     @objc func checkUpdate(_ sender: Any?) {
         let prog = Bundle.main.object(forInfoDictionaryKey: "CFBundleIdentifier") as! String
-        let url = URL(string: "https://www.parker9.com/com.parker9.versions")!
-        URLSession.shared.dataTask(with: url) { data, response, error in
-            if error != nil { return }; guard let response = response as? HTTPURLResponse, (200...299).contains(response.statusCode) else { return }
-            if let database = try? PropertyListSerialization.propertyList(from: data!, format: nil) as? [String : [String]] {
-                if let str = database[prog] {
-                    if self.version != str[0] {
-                        self.updateAvailable = str
+        let url = URL(string: "https://www.parker9.com/com.parker9.versions.plist")!
+        URLCache.shared.removeAllCachedResponses()
+        let getDB = URLSession.shared.dataTask(with: url) { data, response, error in
+            if error != nil  || data == nil { self.updateDownloaded = true; self.updateMenuItem = "Error connecting to server"; return }
+            guard let response = response as? HTTPURLResponse, (200...299).contains(response.statusCode) else { self.updateDownloaded = true; self.updateMenuItem = "Error from update server"; return }
+            do {
+                let database = try PropertyListSerialization.propertyList(from: data!, format: nil) as! [String : [String]]
+                if let progData = database[prog] {
+                    if self.version != progData[0] {
+                        self.updateAvailable = progData
                         if let downloadFile = URL(string: self.updateAvailable[1]) {
                             let appName = Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as! String
                             let target = (FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask)[0]).appendingPathComponent(downloadFile.lastPathComponent)
-                            self.updateAvailable.append((!FileManager.default.fileExists(atPath: target.path)) ? "Download " + appName + " version " + str[0] + "..." : "Locate new " + appName + " version...")
+                            //self.updateMenuItem = (!FileManager.default.fileExists(atPath: target.path)) ? "Download " + appName + " version " + self.updateAvailable[0] + "..." : "Locate new " + appName + " version..."
+                            self.updateMenuItem = (!FileManager.default.fileExists(atPath: target.path)) ? "Download " + self.updateAvailable[1] + "..." : "Locate new " + appName + " version..."
                             DispatchQueue.main.async { self.statusBarItem?.button?.image = self.sbiPictureUpdate }
                         }
-                    } else { self.updateDownloaded = true } // there is no update to download, so just say it was //print("\(prog) is at current version \(version)") }
-                } else { }//print("\(prog) is not in com.parker9.versions.plist")}
-            }
-        }.resume()
+                    } else { self.updateDownloaded = true; self.updateMenuItem = "No update available"}
+                }
+            } catch { self.updateDownloaded = true; self.updateMenuItem = "Error in update data" }
+        }
+        getDB.resume()
     }
     @objc func downloadClicked(_ sender: Any?) {
         if let downloadFile = URL(string: updateAvailable[1]) {
@@ -345,25 +351,29 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             let prog = Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as! String
             let app = downloads.appendingPathComponent(prog + ".app")
             if !updateDownloaded {
-                updateAvailable.removeLast(); self.updateAvailable.append("Trying to download latest version...")
-                URLSession.shared.downloadTask(with: downloadFile) { (tFileUrl, response, error) in
-                    if let tFileUrl = tFileUrl {
-                        do {
-                            let data = try Data(contentsOf: tFileUrl)
-                            try data.write(to: target)
-                            self.updateAvailable.removeLast(); self.updateAvailable.append("Locate new " + (Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as! String) + "  version...")
-                            if FileManager.default.fileExists(atPath: app.path) { try? FileManager.default.trashItem(at: app, resultingItemURL: nil) }
-                            NSWorkspace.shared.open(target)
-                            self.updateDownloaded = true
-                        } catch { }
-                    }
-                }.resume()
-                Timer.scheduledTimer(withTimeInterval: 20, repeats: true) { (timer) in
-                    if FileManager.default.fileExists(atPath: app.path) {
-                        timer.invalidate()
-                        try? FileManager.default.trashItem(at: target, resultingItemURL: nil)
-                    }
+                updateMenuItem = "Trying to download latest version..."
+                URLCache.shared.removeAllCachedResponses()
+                let getUpdate = URLSession.shared.downloadTask(with: downloadFile) { (tFileUrl, response, error) in
+                    if error != nil || tFileUrl == nil { self.updateAvailable.removeAll(); self.updateDownloaded = true; self.updateMenuItem = "Error connecting for download"; return }
+                    guard let response = response as? HTTPURLResponse, let fileURL = tFileUrl, (200...299).contains(response.statusCode) else { self.updateAvailable.removeAll(); self.updateDownloaded = true; self.updateMenuItem = "Error downloading update"; return }
+                    do {
+                        if FileManager.default.fileExists(atPath: target.path) { try? FileManager.default.trashItem(at: target, resultingItemURL: nil) }
+                        try FileManager.default.moveItem(at: fileURL, to: target)
+                        self.updateMenuItem = "Locate new " + (Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as! String) + "  version..."
+                        if FileManager.default.fileExists(atPath: app.path) { try? FileManager.default.trashItem(at: app, resultingItemURL: nil) }
+                        NSWorkspace.shared.open(target)
+                        self.updateDownloaded = true
+                        DispatchQueue.main.async {
+                            Timer.scheduledTimer(withTimeInterval: 30, repeats: false) { (timer) in
+                                if FileManager.default.fileExists(atPath: app.path) {
+                                    timer.invalidate()
+                                    try? FileManager.default.trashItem(at: target, resultingItemURL: nil)
+                                }
+                            }
+                        }
+                    } catch { self.updateAvailable.removeAll(); self.updateDownloaded = true; self.updateMenuItem = "Error saving update"; return }
                 }
+                getUpdate.resume()
             } else {
                 NSWorkspace.shared.selectFile(app.path, inFileViewerRootedAtPath: downloads.path)            }
         }
