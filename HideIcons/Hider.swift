@@ -97,7 +97,7 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
 
     func updateDesktops(_ doAll : Bool = false) {  // update pictures of Desktop(s)
         BGTimer?.invalidate()           // stop any timers
-        print("updateDesktops, doAll=\(doAll) number of myDesktops:\(myDesktops.count), screens:\(Set(myDesktops.map({$0.value.screen})).count) (\(myDesktops.reduce(0) {n, w in return n + (w.value.screen != nil ? 1 : 0)}))  (\(NSScreen.screens.count)) number of CGDesktop on screen: \(getDesktopArray().reduce(0) { numOnScreen, window in let onScreen = window[kCGWindowIsOnscreen as String] as? Bool ?? false; return numOnScreen + (onScreen ? 1 : 0)}) \(memoryFootprint()) # of backups:\(backupDesktops.count)")
+        //print("updateDesktops, doAll=\(doAll) number of myDesktops:\(myDesktops.count), screens:\(Set(myDesktops.map({$0.value.screen})).count) (\(myDesktops.reduce(0) {n, w in return n + (w.value.screen != nil ? 1 : 0)}))  (\(NSScreen.screens.count)) number of CGDesktop on screen: \(getDesktopArray().reduce(0) { numOnScreen, window in let onScreen = window[kCGWindowIsOnscreen as String] as? Bool ?? false; return numOnScreen + (onScreen ? 1 : 0)}) \(memoryFootprint()) # of backups:\(backupDesktops.count)")
         
         for (cgWin, onScreen) in getDesktopArray(doAll ? .optionAll : .optionOnScreenOnly).map({ ($0[kCGWindowNumber as String] as! CGWindowID, $0[kCGWindowIsOnscreen as String] as? Bool ?? false)}) {
             if let win = myDesktops[cgWin] { //print("cgWin=\(cgWin), onScreen=\(onScreen), stationary?\(myDesktops[cgWin]?.collectionBehavior == .stationary)")
@@ -166,7 +166,7 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
     func createDesktops() { //print("createDesktops, myDesktop.count=\(myDesktops.count)")     // make window for each desktop
         BGTimer?.invalidate()   // stop any timer
         
-        print("createDesktops, myDesktop.count=\(myDesktops.count) (\(myDesktops.reduce(0) {n, w in return n + (w.value.screen != nil ? 1 : 0)})) number of CGDesktop on screen: \(getDesktopArray().reduce(0) { numOnScreen, window in let onScreen = window[kCGWindowIsOnscreen as String] as? Bool ?? false; return numOnScreen + (onScreen ? 1 : 0)}) number of monitors: \(Set(myDesktops.map({$0.value.screen})).count) \(memoryFootprint())")
+        //print("createDesktops, myDesktop.count=\(myDesktops.count) (\(myDesktops.reduce(0) {n, w in return n + (w.value.screen != nil ? 1 : 0)})) number of CGDesktop on screen: \(getDesktopArray().reduce(0) { numOnScreen, window in let onScreen = window[kCGWindowIsOnscreen as String] as? Bool ?? false; return numOnScreen + (onScreen ? 1 : 0)}) number of monitors: \(Set(myDesktops.map({$0.value.screen})).count) \(memoryFootprint())")
         //print("number of backupDesktops:\(backupDesktops.count), \(backupDesktops.filter({return $0.beingUsed}).count), \(NSScreen.screens.count)")
         createBackups() //;print("number of backupDesktops:\(backupDesktops.count), \(backupDesktops.filter({return $0.beingUsed}).count), \(NSScreen.screens.count)")
         
