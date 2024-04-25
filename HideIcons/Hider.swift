@@ -46,7 +46,7 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         }
         
         func setWin(imageView: NSImageView, onScreen: Bool, hidden: Bool) { // update picture and pin if we found the correct Space
-            self.contentView = imageView
+            self.contentView = nil; self.contentView = imageView
             if onScreen && !self.collectionBehavior.contains(.stationary) {
                 // pin this window to this Space
                 self.collectionBehavior = [.stationary, .fullScreenNone, .ignoresCycle]
@@ -97,16 +97,15 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
 
     func updateDesktops(_ doAll : Bool = false) {  // update pictures of Desktop(s)
         BGTimer?.invalidate()           // stop any timers
-        //print("updateDesktops, doAll=\(doAll) number of myDesktops:\(myDesktops.count), screens:\(Set(myDesktops.map({$0.value.screen})).count) (\(myDesktops.reduce(0) {n, w in return n + (w.value.screen != nil ? 1 : 0)}))  (\(NSScreen.screens.count)) number of CGDesktop on screen: \(getDesktopArray().reduce(0) { numOnScreen, window in let onScreen = window[kCGWindowIsOnscreen as String] as? Bool ?? false; return numOnScreen + (onScreen ? 1 : 0)})")
+        print("updateDesktops, doAll=\(doAll) number of myDesktops:\(myDesktops.count), screens:\(Set(myDesktops.map({$0.value.screen})).count) (\(myDesktops.reduce(0) {n, w in return n + (w.value.screen != nil ? 1 : 0)}))  (\(NSScreen.screens.count)) number of CGDesktop on screen: \(getDesktopArray().reduce(0) { numOnScreen, window in let onScreen = window[kCGWindowIsOnscreen as String] as? Bool ?? false; return numOnScreen + (onScreen ? 1 : 0)}) \(memoryFootprint()) # of backups:\(backupDesktops.count)")
         
-        let dict = getDesktopArray(doAll ? .optionAll: .optionOnScreenOnly)
-        for (cgWin, onScreen) in dict.map({ ($0[kCGWindowNumber as String] as! CGWindowID, $0[kCGWindowIsOnscreen as String] as? Bool ?? false)}) {
+        for (cgWin, onScreen) in getDesktopArray(doAll ? .optionAll : .optionOnScreenOnly).map({ ($0[kCGWindowNumber as String] as! CGWindowID, $0[kCGWindowIsOnscreen as String] as? Bool ?? false)}) {
             if let win = myDesktops[cgWin] { //print("cgWin=\(cgWin), onScreen=\(onScreen), stationary?\(myDesktops[cgWin]?.collectionBehavior == .stationary)")
                 setImageView(cgWin: cgWin, win: win, onScreen: onScreen)    //;print(cgWin,myDesktops[cgWin]!.frame,onScreen,myDesktops[cgWin]!.collectionBehavior.contains(.stationary),hidden)
             }  //else { print("    OOPS- \(cgWin) is not in MyDesktops!") }
         } //;print(" ")
         doTimer()                                           // restart any timers
-        //print("number of myDesktops:\(myDesktops.count), screens:\(Set(myDesktops.map({$0.value.screen})).count), NSScreen:\(NSScreen.screens.count)")
+        //print("number of myDesktops:\(myDesktops.count), screens:\(Set(myDesktops.map({$0.value.screen})).count), NSScreen:\(NSScreen.screens.count) \(memoryFootprint())")
     }
     
     func setImageView(cgWin: CGWindowID, win : MyWindow, onScreen : Bool) {
@@ -167,23 +166,21 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
     func createDesktops() { //print("createDesktops, myDesktop.count=\(myDesktops.count)")     // make window for each desktop
         BGTimer?.invalidate()   // stop any timer
         
+        print("createDesktops, myDesktop.count=\(myDesktops.count) (\(myDesktops.reduce(0) {n, w in return n + (w.value.screen != nil ? 1 : 0)})) number of CGDesktop on screen: \(getDesktopArray().reduce(0) { numOnScreen, window in let onScreen = window[kCGWindowIsOnscreen as String] as? Bool ?? false; return numOnScreen + (onScreen ? 1 : 0)}) number of monitors: \(Set(myDesktops.map({$0.value.screen})).count) \(memoryFootprint())")
         //print("number of backupDesktops:\(backupDesktops.count), \(backupDesktops.filter({return $0.beingUsed}).count), \(NSScreen.screens.count)")
         createBackups() //;print("number of backupDesktops:\(backupDesktops.count), \(backupDesktops.filter({return $0.beingUsed}).count), \(NSScreen.screens.count)")
         
         let screens = NSScreen.screens; let h0 = NSHeight(screens[0].frame) // height of Screen that has menu bar
         myDesktops.forEach({ _, win in win.beingUsed = false; win.level = .hiddenLayer; win.orderOut(nil) })  // assume window is not going to be used
-        for desktopWindows in getDesktopArray() {   // loop over CGWindows that are Desktops...
-            let rectCG = CGRect(dictionaryRepresentation: desktopWindows[kCGWindowBounds as String] as! CFDictionary)!
+        for (cgID, onScreen, rectCG) in getDesktopArray().map({ ($0[kCGWindowNumber as String] as! CGWindowID, $0[kCGWindowIsOnscreen as String] as? Bool ?? false, CGRect(dictionaryRepresentation: $0[kCGWindowBounds as String] as! CFDictionary)!)}) {
             let origin = CGPoint(x: rectCG.origin.x, y: h0 - rectCG.origin.y - rectCG.height)
-            let rect = CGRect(origin: origin, size: rectCG.size)            // CGrect is in Screen coordinates
-            let cgID = desktopWindows[kCGWindowNumber as String] as! CGWindowID
+            let rect = CGRect(origin: origin, size: rectCG.size)            // CGrect is in Screen coordinate
             //print("is cgID not in myDesktops? \(myDesktops[cgID]==nil)")
             if let win = myDesktops[cgID] {
                 win.reset(contentRect: rect, hidden: hidden)
             } else {
                 myDesktops[cgID] = MyWindow(contentRect: rect, hidden: hidden)
             }
-            let onScreen = desktopWindows[kCGWindowIsOnscreen as String] as? Bool ?? false
             setImageView(cgWin: cgID, win: myDesktops[cgID]!, onScreen: onScreen)   //;print(cgID,myDesktops[cgID]!.frame)
         }
         //print("number of myDesktops:\(myDesktops.count), \(NSScreen.screens.count)")
@@ -195,7 +192,7 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         //getDesktopArray().reduce(0,{$1[kCGWindowIsOnscreen as String] as? Bool ?? false})
         //print("createDesktops, myDesktop.count=\(myDesktops.count) (\(myDesktops.reduce(0) {n, w in return n + (w.value.screen != nil ? 1 : 0)})) number of CGDesktop on screen: \(getDesktopArray().reduce(0) { numOnScreen, window in let onScreen = window[kCGWindowIsOnscreen as String] as? Bool ?? false; return numOnScreen + (onScreen ? 1 : 0)}) number of monitors: \(Set(myDesktops.map({$0.value.screen})).count)")
         doTimer()
-        //print("number of myDesktops:\(myDesktops.count), screens:\(Set(myDesktops.map({$0.value.screen})).count)")
+        //print("number of myDesktops:\(myDesktops.count), screens:\(Set(myDesktops.map({$0.value.screen})).count) \(memoryFootprint())")
     }
     func createBackups() {
         backupDesktops.forEach({ win in win.beingUsed = false; win.orderOut(nil); win.level = .hiddenLayer })
@@ -253,15 +250,15 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         NCdefault.addObserver(self, selector: #selector(self.timerChanged(_:)), name: .timeBG, object: nil)             // catch background timer interval
         NCdefault.addObserver(self, selector: #selector(self.desktopTypeChange(_:)), name: .desktopType, object: nil)   // desktops are actual or solid color, for one or all
         NCdefault.addObserver(forName: .createDesktops, object: nil, queue: .main, using: { not in self.createDesktops() })
-        NCdefault.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main, using: {_ in //print("didChangeScreenParameters");
-            self.BGTimer?.invalidate(); usleep(500_000); self.createDesktops()})    //;print("didChangeScreenParameters done")})
+        NCdefault.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main, using: {_ in //print("didChangeScreenParameters \(self.memoryFootprint())");
+            self.BGTimer?.invalidate(); usleep(500_000); self.createDesktops()})    //;print("didChangeScreenParameters done  \(self.memoryFootprint())")})
         NCdefault.addObserver(forName: .doHide, object: nil, queue: .main, using: {_ in self.doHide() })
         let WSsharedNC = NSWorkspace.shared.notificationCenter
         WSsharedNC.addObserver(forName: NSWorkspace.screensDidSleepNotification, object: nil, queue: .main, using: {_ in self.BGTimer?.invalidate()  })//; print("didSleep") })
-        WSsharedNC.addObserver(forName: NSWorkspace.screensDidWakeNotification, object: nil, queue: .main, using: {_ in //print("didWake")
-            self.updateDesktops(true)}) //; print("didWake done") })
-        WSsharedNC.addObserver(forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main, using: { _ in //print("activeSpaceDidChange")
-            self.BGTimer?.invalidate(); usleep(150_000);  self.updateDesktops(true)})   //;print("activeSpaceDidChange done")}) //ugh! FIXME apple
+        WSsharedNC.addObserver(forName: NSWorkspace.screensDidWakeNotification, object: nil, queue: .main, using: {_ in //print("didWake \(self.memoryFootprint())")
+            self.updateDesktops(true)}) //; print("didWake done \(self.memoryFootprint())") })
+        WSsharedNC.addObserver(forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main, using: { _ in //print("activeSpaceDidChange  \(self.memoryFootprint())")
+            self.BGTimer?.invalidate(); usleep(150_000);  self.updateDesktops(true)})   //;print("activeSpaceDidChange done \(self.memoryFootprint())")}) //ugh! FIXME apple
         
         // this should capture in/out of Dark Mode
         if #available(OSX 10.14, *) {
@@ -286,5 +283,30 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         NCdefault.removeObserver(self, name: .createDesktops, object: nil)
         NCdefault.removeObserver(self, name: .desktopType, object: nil)
         myDesktops.removeAll(); backupDesktops.removeAll() // and free up screen/window dictionary
+    }
+    
+    func memoryFootprint() -> String {
+        // The `TASK_VM_INFO_COUNT` and `TASK_VM_INFO_REV1_COUNT` macros are too
+        // complex for the Swift C importer, so we have to define them ourselves.
+        let TASK_VM_INFO_COUNT = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<integer_t>.size)
+        guard let offset = MemoryLayout.offset(of: \task_vm_info_data_t.min_address) else {return "memory: NA"}
+        let TASK_VM_INFO_REV1_COUNT = mach_msg_type_number_t(offset / MemoryLayout<integer_t>.size)
+        var info = task_vm_info_data_t()
+        var count = TASK_VM_INFO_COUNT
+        let kr = withUnsafeMutablePointer(to: &info) { infoPtr in
+            infoPtr.withMemoryRebound(to: integer_t.self, capacity: Int(count)) { intPtr in
+                task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), intPtr, &count)
+            }
+        }
+        guard
+            kr == KERN_SUCCESS,
+            count >= TASK_VM_INFO_REV1_COUNT
+        else { return "memory: NA" }
+        
+        let usedBytes = Float(info.phys_footprint)
+        let usedBytesInt: UInt64 = UInt64(usedBytes)
+        let usedMB = usedBytesInt / 1024 / 1024
+        let usedMBAsString: String = "memory: \(usedMB) MB"
+        return usedMBAsString
     }
 }
