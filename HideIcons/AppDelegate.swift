@@ -44,6 +44,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var updateDownloaded = false
     var updateMenuItem = "Check for update..."
     
+    // keep track of NSApp that had focus before us
+    var previousApp : NSRunningApplication?
+    
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         
         // get version of this app
@@ -70,6 +73,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         
         // date the app started + 2 second
         startDate = Date(timeIntervalSinceNow: TimeInterval(2.0))
+        
+        // keep track of app that had focus before us...
+        NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main, using: {_ in
+            if let app = NSWorkspace.shared.frontmostApplication {
+                if app.bundleIdentifier != Bundle.main.object(forInfoDictionaryKey: "CFBundleIdentifier") as? String { self.previousApp = app }
+            }
+        })
     }
     
     func applicationWillTerminate(_ aNotification: Notification) {
@@ -94,6 +104,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         } else {
             toggle(nil)         // didn't start app, so toggle icons
         }
+        // return controll to last app who had focus otherwise finder otherwise window server otherwise random apple app.
+        if let app = NSWorkspace.shared.runningApplications.filter({$0 == previousApp}).first { //print("reactivating \(app.bundleIdentifier)");
+            app.activate()
+        } else if let finder = NSWorkspace.shared.runningApplications.filter({$0.bundleIdentifier == "com.apple.finder"}).first { //print("activating finder");
+            finder.activate()
+        } else if let windowServer = NSWorkspace.shared.runningApplications.filter({$0.bundleIdentifier == "com.apple.WindowManager"}).first {
+            windowServer.activate()
+        } else { NSWorkspace.shared.runningApplications.filter({$0.bundleIdentifier!.starts(with: "com.apple")}).last?.activate() }
     }
     // construct status bar item
     func setStatusBarItem(image: NSImage? ) -> NSStatusItem? {
