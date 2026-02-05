@@ -70,6 +70,7 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
     // hide or show Desktop icons
     func doHide() { //print("in doHide, hidden=\(!hidden), empty myDesktops?\(myDesktops.isEmpty)")
         hidden = !hidden        // toggle hide/show icons
+        UserDefaults.standard.set(hidden, forKey: "hidden") // save state
         if hidden {             // appears the user want to hide icons
             updateDesktops(true) // force all Desktops to be updated
             backupDesktops.filter({return $0.beingUsed}).forEach({win in win.level = .floatLayer})
@@ -243,7 +244,7 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
     }
     // set up initial window lists for each screen and observers
     init() {
-        hidden = true
+        hidden = ( UserDefaults.standard.object(forKey: "hidden") == nil) ? true : UserDefaults.standard.bool(forKey: "hidden")
         createDesktops() // go grab all the Desktops
         
         let NCdefault = NotificationCenter.default
@@ -256,7 +257,7 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         let WSsharedNC = NSWorkspace.shared.notificationCenter
         WSsharedNC.addObserver(forName: NSWorkspace.screensDidSleepNotification, object: nil, queue: .main, using: {_ in self.BGTimer?.invalidate()  })//; print("didSleep") })
         WSsharedNC.addObserver(forName: NSWorkspace.screensDidWakeNotification, object: nil, queue: .main, using: {_ in //print("didWake \(self.memoryFootprint())")
-            self.updateDesktops(true)}) //; print("didWake done \(self.memoryFootprint())") })
+            usleep(500_000); self.updateDesktops(true)}) //; print("didWake done \(self.memoryFootprint())") })
         WSsharedNC.addObserver(forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main, using: { _ in //print("activeSpaceDidChange  \(self.memoryFootprint())")
             self.BGTimer?.invalidate(); usleep(150_000);  self.updateDesktops(true)})   //;print("activeSpaceDidChange done \(self.memoryFootprint())")}) //ugh! FIXME apple
         
