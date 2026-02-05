@@ -87,10 +87,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
     
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        if statusBarItem == nil || sbiHidden {
-            if statusBarItem == nil { statusBarItem = setStatusBarItem(image: sbiPicture) }
-            sbiHidden = false
-        }
+
+        if statusBarItem == nil { statusBarItem = setStatusBarItem(image: sbiPicture) }
+        sbiHidden = false
         return false
     }
     
