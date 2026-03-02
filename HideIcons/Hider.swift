@@ -2,7 +2,7 @@
 //  Hider.swift
 //
 //  Created by G.J. Parker on 21/04/02.
-//  Copyright © 2021 G.J. Parker. All rights reserved.
+//  Copyright © 2026 G.J. Parker. All rights reserved.
 //
 
 import Cocoa
@@ -32,7 +32,7 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         }
         
         func reset(contentRect: NSRect, hidden: Bool) {
-            self.setFrame(contentRect, display: true, animate: false)   // force the correct frame for window
+            self.setFrame(contentRect, display: true)   // force the correct frame for window
             //if #available(macOS 13.0, *) { self.collectionBehavior = [.canJoinAllSpaces, .canJoinAllApplications, .fullScreenNone, .ignoresCycle] } else { self.collectionBehavior = [.canJoinAllSpaces, .fullScreenNone, .ignoresCycle] }
             self.collectionBehavior = [.canJoinAllSpaces, .fullScreenNone, .ignoresCycle]
             self.level = hidden ? .floatLayer : .hiddenLayer
@@ -117,7 +117,7 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
             imageView.imageScaling = .scaleAxesIndependently
             win.setWin(imageView: imageView, onScreen: onScreen, hidden: hidden)
         } else {
-            guard let cgImage = CGWindowListCreateImage(CGRectNull, [.optionIncludingWindow], cgWin, [.nominalResolution]) else { return }
+            guard let cgImage = CGWindowListCreateImage(CGRectNull, [.optionIncludingWindow], cgWin, [.bestResolution]) else { return }
             let image = NSImage(cgImage: cgImage, size: NSZeroSize)
             let imageView = NSImageView(image: image)
             win.setWin(imageView: imageView, onScreen: onScreen, hidden: hidden)
