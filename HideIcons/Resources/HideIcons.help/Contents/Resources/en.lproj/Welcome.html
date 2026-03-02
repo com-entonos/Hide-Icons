@@ -28,8 +28,8 @@
            <p class="Left Normal">
 <img src="Welcome.jpg" alt="" >
 ￼</p>
-                 <p class="Left Normal">Notice the default key combination (this can be changed, see below).</p>
-	<ul><li>)	As a menu item, 
+                 <p class="Left Normal">Notice the default key combination was changed (see below).</p>
+	<ul><li>)	As a menu item,
 <img src="Welcome1.jpg" alt="" >
 ￼</li></ul>
               <p class="Left Normal">
@@ -41,15 +41,20 @@
 </b><p class="Left Normal">If <i>Check for changing Desktop</i> is set to anything other than <i>Never</i>, <i>Hide Icons</i> will update the Desktop every time interval specified. This allows for changing Desktops.  </p>
 </b><p class="Left Normal"><i>Change menu</i> allows you to hide the menu item (replaces it with a blank icon) or to completely remove the menu from the menu bar. For the latter case, one can still use Services to toggle showing/hiding icons. To get the menu back, simply re-run <i>Hide Icons</i>.  </p>
 </b><p class="Left Normal"><i>Set Desktop wallpaper</i> allows you to use either the actual Desktop wallpaper or to use a custom color wallpaper. Either for all Desktops or for individual Desktops. If you have either more than one display or more than one Space, you have multiple Desktops. </p>
-</b><p class="Left Normal"><i>Refresh Desktop</i> forces an update of all Desktops across all displays and Spaces. This option will also cause <i>Hide Icons</i> to forget which Desktop goes with which Space (see below). This is essentially a restart of <i>Hide Icons</i>. </p>
+</b><p class="Left Normal"><i>Force Desktop refresh</i> forces an update of all Desktops across all displays and Spaces. This option will also cause <i>Hide Icons</i> to forget which Desktop goes with which Space (see below). This is essentially a restart of <i>Hide Icons</i>. </p>
 </b><p class="Left Normal"><i>Check for update...</i> reaches out (via https) to see if there is a new version of <i>Hide Icons</i>. If there is, this menu item changes to <i>Download</i>. If this is selected, then a new version is downloaded to the Downloads folder (also via https) and then the menu item changes to <i>Locate update</i>. Selecting this will present a Finder window with the update highlighted. It is up to you to quit <i>Hide Icons</i> and repace it with this updated version. Please note, the downloaded zip file will be moved to the trash eventually along with any previous version of <i>Hide Icons</i>. </p>
 <p class="Left Normal">
 
 <p class="Left Normal"><b>2) Services</p>
-</b><p class="Left Normal"><i>Hide Icon</i> can be controlled by Services. You may have to got to >System Preferences…>Keyboard, select Shortcuts, select Services on the left and check Toggle Desktop Icons on the right.  You can also select your own shortcut. </p>
+</b><p class="Left Normal"><i>Hide Icon</i> can be controlled by Services. You may have to got to >System Settings…>Keyboard, select Keyboard Shortcuts. </p>
+<p class="Left Normal">
+<img src="Welcome3a.jpg" alt="" >
+￼</p>
+</b><p class="Left Normal">Select Services on the left, open General on the right and check Toggle Desktop Icons on the right.  You can also select your own shortcut by double-clicking on the shortcut. </p>
 <p class="Left Normal">
 <img src="Welcome3.jpg" alt="" >
 ￼</p>
+
 <p class="Left Normal">If Toggle Desktop Icons is not present, make sure <i>Hide Icons</i> is in the Applications folder and you will need to logout/login for macOS to see the Service.</p>
 
 <p class="Left Normal"><b>3) Where is the menu (</b>
@@ -62,7 +67,7 @@
 <p class="Left Normal">If command key (⌘) is held when <i>Hide Icons</i> starts, the user defined preferences are overwritten with default preferences- useful if you chose a preference set you don't like. </p>
 
 <p class="Left Normal"><b>4) Requirements</b></p>
-<p class="Left Normal"><i>Hide Icon</i> was written in Swift with Xcode 14.2. It was compiled to support macOS 10.13 (High Sierra) through 13.x (Ventura). Versions before 10.14 (Mojave) can not detect Dark Mode switching.</p>
+<p class="Left Normal"><i>Hide Icon</i> was written in Swift. It was compiled to support macOS 10.13 (High Sierra) through 26.3 (Tahoe). Versions before 10.14 (Mojave) can not detect Dark Mode switching.</p>
 <b>
 <p class="Left Normal">5) Details</b></p>
 <p class="Left Normal"><i>Hide Icon</i> doesn’t touch the Desktop icons. It simply takes a picture of the Desktop (without the icons) and displays this picture just above the real Desktop giving the illusion that the icons have vanished. THEY HAVE NOT. If you open a Finder window, you can easily navigate to Desktop. From there you can add, remove and manipulate items on the Desktop. You must either Show Desktop Icons or quit <i>Hide Icons</i> to have the usual Desktop back.</p>
