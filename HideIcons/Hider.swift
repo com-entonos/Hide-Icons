@@ -6,6 +6,7 @@
 //
 
 import Cocoa
+//@preconcurrency import ScreenCaptureKit
 
 extension Notification.Name {
     static let doHide = NSNotification.Name("doHide")                       //toggle hide/show Desktop icons
@@ -128,6 +129,17 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
     func getDesktopArray(_ option: CGWindowListOption = .optionAll) -> [[String: AnyObject]] {
         var nTry = 0
         repeat {
+            /*let desktopWindowLevel = CGWindowLevelForKey(.desktopWindow) - 1                                // level of Desktop background image
+            if #available(macOS 12.3, *) {
+                SCShareableContent.getExcludingDesktopWindows(false, onScreenWindowsOnly: option == .optionOnScreenOnly, completionHandler: {(sharableContent, error) in
+                    let windows = sharableContent?.windows.filter({$0.windowLayer == desktopWindowLevel})
+                    let displays = sharableContent?.displays ?? []
+                    //displays.filter({$0.description == <#T##SCDisplay#>.id})
+                    let filter = SCContentFilter(desktopIndependentWindow: <#T##SCWindow#>)
+                })
+            } else {
+                // Fallback on earlier versions
+            }*/
             // need to find Desktop windows... (let's use apple's approved way so we don't trip up security guards)
             let windows = CGWindowListCopyWindowInfo([option], kCGNullWindowID)! as! [[String: AnyObject]]  // get (all or onscreen) windows
             let desktopWindowLevel = CGWindowLevelForKey(.desktopWindow) - 1                                // level of Desktop background image
