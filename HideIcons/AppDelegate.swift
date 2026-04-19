@@ -39,7 +39,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var defaultTime = "Never"
     
     var version = "0.0.0"
-    let appStore = false    // this app destined to macOS App Store?
+    var appStore = false    // this app destined to macOS App Store?
     var updateAvailable = [String]()
     var updateDownloaded = false
     var updateMenuItem = "Check for update..."
@@ -52,6 +52,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // get version of this app
         version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as! String
         //version = "2.1.1"
+        appStore = (Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? Int ?? 2) % 2 == 0 // even build numbers are for macOS App Store
         
         // restore user preferences
         if !NSEvent.modifierFlags.contains(.command) { setDefaultValues() }
@@ -221,20 +222,21 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             if updateAvailable.count < 1 { donateItem.attributedTitle = NSAttributedString(string: "Donate...", attributes: [NSAttributedString.Key.foregroundColor: NSColor.red]) }
             menu.addItem(donateItem)
         }
-        
-        if !appStore {
-            menu.addItem(NSMenuItem.separator())
-            if updateAvailable.count > 1 {
-                let downloadItem = NSMenuItem(title: updateMenuItem, action: #selector(self.downloadClicked(_:)), keyEquivalent: "")
-                downloadItem.attributedTitle = NSAttributedString(string: updateMenuItem, attributes: [NSAttributedString.Key.foregroundColor: NSColor.red])
-                menu.addItem(downloadItem)
-            } else if !updateDownloaded {
-                menu.addItem(NSMenuItem(title: updateMenuItem, action: #selector(self.checkUpdate(_:)), keyEquivalent: ""))
-            } else {
-                let noUpdate = NSMenuItem(title: updateMenuItem, action: nil, keyEquivalent: "")
-                noUpdate.isEnabled = false
-                menu.addItem(noUpdate)
-                Timer.scheduledTimer(withTimeInterval: 5*60, repeats: false) { (timer) in self.updateDownloaded = false; self.updateMenuItem = "Check for update..." } // allow for checking in 15 minutes...
+        if !Bundle.main.bundlePath.contains("Contents/Library/LoginItems") {
+            if !appStore {
+                menu.addItem(NSMenuItem.separator())
+                if updateAvailable.count > 1 {
+                    let downloadItem = NSMenuItem(title: updateMenuItem, action: #selector(self.downloadClicked(_:)), keyEquivalent: "")
+                    downloadItem.attributedTitle = NSAttributedString(string: updateMenuItem, attributes: [NSAttributedString.Key.foregroundColor: NSColor.red])
+                    menu.addItem(downloadItem)
+                } else if !updateDownloaded {
+                    menu.addItem(NSMenuItem(title: updateMenuItem, action: #selector(self.checkUpdate(_:)), keyEquivalent: ""))
+                } else {
+                    let noUpdate = NSMenuItem(title: updateMenuItem, action: nil, keyEquivalent: "")
+                    noUpdate.isEnabled = false
+                    menu.addItem(noUpdate)
+                    Timer.scheduledTimer(withTimeInterval: 5*60, repeats: false) { (timer) in self.updateDownloaded = false; self.updateMenuItem = "Check for update..." } // allow for checking in 15 minutes...
+                }
             }
         }
         
