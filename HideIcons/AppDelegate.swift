@@ -49,6 +49,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         
+        DistributedNotificationCenter.default().addObserver(forName: NSNotification.Name("pleaseQuitHI"), object: nil, queue: .main) { _ in NSApp.terminate(nil) }
+        
         // get version of this app
         version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as! String
         //version = "2.1.1"
