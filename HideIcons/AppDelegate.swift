@@ -48,13 +48,20 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var previousApp : NSRunningApplication?
     
     func applicationDidFinishLaunching(_ aNotification: Notification) {
-        
+        // to be helper app or not
+        //  1. listen for requests to quit
+        //  2. post when we start or stop
+        //  3. listen for a ping and pong back if we're alive
         DistributedNotificationCenter.default().addObserver(forName: NSNotification.Name("pleaseQuitHI"), object: nil, queue: .main) { _ in NSApp.terminate(nil) }
+        DistributedNotificationCenter.default().addObserver(forName: NSNotification.Name("pingHI"), object: nil, queue: .main) { _ in DistributedNotificationCenter.default().postNotificationName(NSNotification.Name("pongHI"), object: "running", userInfo: nil, deliverImmediately: true)
+        }
+        DistributedNotificationCenter.default().postNotificationName(NSNotification.Name("pongHI"), object: "running", userInfo: nil, deliverImmediately: true)  // let the world know we're up
         
         // get version of this app
         version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as! String
         //version = "2.1.1"
-        appStore = (Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? Int ?? 2) % 2 == 0 // even build numbers are for macOS App Store
+        let ver = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "0"
+        appStore = (Int(ver) ?? 2) % 2 == 0 // even build numbers are for macOS App Store
         
         // restore user preferences
         if !NSEvent.modifierFlags.contains(.command) { setDefaultValues() }
@@ -87,6 +94,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     
     func applicationWillTerminate(_ aNotification: Notification) {
         hider = nil // remove observers
+        // let the world know we're done
+        DistributedNotificationCenter.default().postNotificationName(NSNotification.Name("pongHI"), object: "stopped", userInfo: nil, deliverImmediately: true)
     }
     
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
