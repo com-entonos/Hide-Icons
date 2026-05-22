@@ -56,6 +56,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         DistributedNotificationCenter.default().addObserver(forName: NSNotification.Name("pingHI"), object: nil, queue: .main) { _ in DistributedNotificationCenter.default().postNotificationName(NSNotification.Name("pongHI"), object: "running", userInfo: nil, deliverImmediately: true)
         }
         DistributedNotificationCenter.default().postNotificationName(NSNotification.Name("pongHI"), object: "running", userInfo: nil, deliverImmediately: true)  // let the world know we're up
+        DistributedNotificationCenter.default().addObserver(forName: .doHide, object: nil, queue: .main) { _ in
+            NotificationCenter.default.post(name: .doHide, object: nil)
+        }
         
         // get version of this app
         version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as! String
