@@ -214,17 +214,9 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         //print("number of backupDesktops:\(backupDesktops.count), \(backupDesktops.filter({return $0.beingUsed}).count), \(NSScreen.screens.count)")
         createBackups() //;print("number of backupDesktops:\(backupDesktops.count), \(backupDesktops.filter({return $0.beingUsed}).count), \(NSScreen.screens.count)")
         
-        let screens = NSScreen.screens; let h0 = NSHeight(screens[0].frame) // height of Screen that has menu bar
         myDesktops.forEach({ _, win in win.beingUsed = false; win.level = .hiddenLayer; win.orderOut(nil) })  // assume window is not going to be used
-        for (cgID, onScreen, rectCG) in getDesktopArray().map({ ($0[kCGWindowNumber as String] as! CGWindowID, $0[kCGWindowIsOnscreen as String] as? Bool ?? false, CGRect(dictionaryRepresentation: $0[kCGWindowBounds as String] as! CFDictionary)!)}) {
-            let origin = CGPoint(x: rectCG.origin.x, y: h0 - rectCG.origin.y - rectCG.height)
-            let rect = CGRect(origin: origin, size: rectCG.size)            // CGrect is in Screen coordinate
-            //print("is cgID not in myDesktops? \(myDesktops[cgID]==nil)")
-            if let win = myDesktops[cgID] {
-                win.reset(contentRect: rect, hidden: hidden)
-            } else {
-                myDesktops[cgID] = MyWindow(contentRect: rect, hidden: hidden)
-            }
+        for (cgID, onScreen, frame) in getDesktopArray().map({ ($0[kCGWindowNumber as String] as! CGWindowID, $0[kCGWindowIsOnscreen as String] as? Bool ?? false, CGRect(dictionaryRepresentation: $0[kCGWindowBounds as String] as! CFDictionary)!)}) {
+            addDesktop(cgWin: cgID, frame: frame, onScreen: onScreen)
             setImageView(cgWin: cgID, win: myDesktops[cgID]!, onScreen: onScreen)   //;print(cgID,myDesktops[cgID]!.frame)
         }
         //print("number of myDesktops:\(myDesktops.count), \(NSScreen.screens.count)")
