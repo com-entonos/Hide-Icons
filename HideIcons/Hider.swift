@@ -119,9 +119,6 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
                 config.showsCursor = false
                 config.captureResolution = .best
                 
-                //guard let targetDisplay = content.displays.first(where: { $0.frame.contains(origin) }) else { return }
-                //guard let targetWindow = content.windows.first(where: { $0.windowID == cgWin }) else { return }
-                //let filter = SCContentFilter(display: targetDisplay, excludingApplications: content.applications, exceptingWindows: [])
                 let filter = SCContentFilter(desktopIndependentWindow: desktopWindow)
                 let cgImage = try await SCScreenshotManager.captureImage( contentFilter: filter, configuration: config)
                 
@@ -137,20 +134,16 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
                 NSLog("Desktop capture failed: \(error)")
             }
         }
-        
-            
     }
     func updateDesktops(_ doAll : Bool = false) {  // update pictures of Desktop(s)
         BGTimer?.invalidate()           // stop any timers
-        //print("updateDesktops, doAll=\(doAll) number of myDesktops:\(myDesktops.count), screens:\(Set(myDesktops.map({$0.value.screen})).count) (\(myDesktops.reduce(0) {n, w in return n + (w.value.screen != nil ? 1 : 0)}))  (\(NSScreen.screens.count)) number of CGDesktop on screen: \(getDesktopArray().reduce(0) { numOnScreen, window in let onScreen = window[kCGWindowIsOnscreen as String] as? Bool ?? false; return numOnScreen + (onScreen ? 1 : 0)}) \(memoryFootprint()) # of backups:\(backupDesktops.count)")
         
         for (cgWin, onScreen, frame) in getDesktopArray(doAll ? .optionAll : .optionOnScreenOnly).map({ ($0[kCGWindowNumber as String] as! CGWindowID, $0[kCGWindowIsOnscreen as String] as? Bool ?? false, CGRect(dictionaryRepresentation: $0[kCGWindowBounds as String] as! CFDictionary)!)}) {
             if myDesktops[cgWin] == nil { addDesktop(cgWin: cgWin, frame: frame, onScreen: onScreen) }
             setImageView(cgWin: cgWin, win: myDesktops[cgWin]!, onScreen: onScreen)
-        } //;print(" ")
+        }
         guessImage()
-        doTimer()                                           // restart any timers
-        //print("number of myDesktops:\(myDesktops.count), screens:\(Set(myDesktops.map({$0.value.screen})).count), NSScreen:\(NSScreen.screens.count) \(memoryFootprint())")
+        doTimer()                       // restart any timers
     }
     
     func setImageView(cgWin: CGWindowID, win : MyWindow, onScreen : Bool) {
@@ -164,7 +157,6 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
 
         if #available(macOS 27.0, *) {
             if onScreen { refreshDesktopImage(cgWin: cgWin, win: win, onScreen: onScreen) }
-            //refreshDesktopImage(cgWin: cgWin, win: win, onScreen: onScreen)
         } else {
             guard let cgImage = CGWindowListCreateImage(CGRectNull, [.optionIncludingWindow], cgWin, [.bestResolution]) else { return }
             win.lastGoodImage = cgImage
@@ -214,29 +206,25 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
     func createDesktops() { //print("createDesktops, myDesktop.count=\(myDesktops.count)")     // make window for each desktop
         BGTimer?.invalidate()   // stop any timer
         
-        //print("createDesktops, myDesktop.count=\(myDesktops.count) (\(myDesktops.reduce(0) {n, w in return n + (w.value.screen != nil ? 1 : 0)})) number of CGDesktop on screen: \(getDesktopArray().reduce(0) { numOnScreen, window in let onScreen = window[kCGWindowIsOnscreen as String] as? Bool ?? false; return numOnScreen + (onScreen ? 1 : 0)}) number of monitors: \(Set(myDesktops.map({$0.value.screen})).count) \(memoryFootprint())")
-        //print("number of backupDesktops:\(backupDesktops.count), \(backupDesktops.filter({return $0.beingUsed}).count), \(NSScreen.screens.count)")
-        createBackups() //;print("number of backupDesktops:\(backupDesktops.count), \(backupDesktops.filter({return $0.beingUsed}).count), \(NSScreen.screens.count)")
+        createBackups()
         
         myDesktops.forEach({ _, win in win.beingUsed = false; win.level = .hiddenLayer; win.orderOut(nil) })  // assume window is not going to be used
         for (cgID, onScreen, frame) in getDesktopArray().map({ ($0[kCGWindowNumber as String] as! CGWindowID, $0[kCGWindowIsOnscreen as String] as? Bool ?? false, CGRect(dictionaryRepresentation: $0[kCGWindowBounds as String] as! CFDictionary)!)}) {
             addDesktop(cgWin: cgID, frame: frame, onScreen: onScreen)
-            setImageView(cgWin: cgID, win: myDesktops[cgID]!, onScreen: onScreen)   //;print(cgID,myDesktops[cgID]!.frame)
+            setImageView(cgWin: cgID, win: myDesktops[cgID]!, onScreen: onScreen)
         }
-        //print("number of myDesktops:\(myDesktops.count), \(NSScreen.screens.count)")
-        for cgID in myDesktops.filter({ return !$0.value.beingUsed}).keys { //print(cgID,myDesktops[cgID]!.frame,myDesktops[cgID]!.beingUsed)   // remove any myDesktops that are not being used
-            myDesktops[cgID]?.orderOut(nil); myDesktops.removeValue(forKey: cgID)//if let myD = myDesktops.removeValue(forKey: cgID) {myD.close()}    //?.close()
-        }   //;print("number of myDesktops:\(myDesktops.count), \(NSScreen.screens.count)")
+        // remove any myDesktops that are not being used
+        for cgID in myDesktops.filter({ return !$0.value.beingUsed}).keys {
+            myDesktops[cgID]?.orderOut(nil); myDesktops.removeValue(forKey: cgID)
+        }
         guessImage()
-        myDesktops.forEach({_, win in win.orderFrontRegardless()})
         backupDesktops.forEach({win in if win.beingUsed {win.orderFrontRegardless()}})
-
-        //getDesktopArray().reduce(0,{$1[kCGWindowIsOnscreen as String] as? Bool ?? false})
-        //print("createDesktops, myDesktop.count=\(myDesktops.count) (\(myDesktops.reduce(0) {n, w in return n + (w.value.screen != nil ? 1 : 0)})) number of CGDesktop on screen: \(getDesktopArray().reduce(0) { numOnScreen, window in let onScreen = window[kCGWindowIsOnscreen as String] as? Bool ?? false; return numOnScreen + (onScreen ? 1 : 0)}) number of monitors: \(Set(myDesktops.map({$0.value.screen})).count)")
+        myDesktops.forEach({_, win in win.orderFrontRegardless()})
+        
         doTimer()
-        //print("number of myDesktops:\(myDesktops.count), screens:\(Set(myDesktops.map({$0.value.screen})).count) \(memoryFootprint())")
     }
 
+    // for macOS 27+, guess what new unseen Desktop will be the same as this Desktop...
     func guessImage() {
         if #available(macOS 27.0, *) {
             Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false, block: { _ in
@@ -257,15 +245,15 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         while NSScreen.screens.count < 1 { usleep(150_000) }
         let screens = NSScreen.screens
         for (idx, screen) in screens.enumerated() {
-            if idx >= backupDesktops.count {
-                backupDesktops.append(MyWindow(contentRect: screen.frame, hidden: hidden))
-            } else {
+            if idx < backupDesktops.count {
                 backupDesktops[idx].reset(contentRect: screen.frame, hidden: hidden)
+            } else {
+                backupDesktops.append(MyWindow(contentRect: screen.frame, hidden: hidden))
             }
             backupDesktops[idx].color = .black
             setImageView(cgWin: 0, win: backupDesktops[idx], onScreen: false)
         }
-        backupDesktops.forEach({win in if win.beingUsed {win.orderFrontRegardless()}})  //; backupDesktops.forEach({win in print(win.frame,win.beingUsed)})
+        backupDesktops.forEach({win in if win.beingUsed {win.orderFrontRegardless()}})
     }
     // number of Desktops
     var numberOfDesktops: Int {
@@ -310,7 +298,7 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
     func showAlert() {
         let alert = NSAlert()
         alert.messageText = "Hide Icons Requires Permissions"
-        alert.informativeText = "Snapshot of Desktop wallpaper is required for functionality.\n\nNo snapshots, audio or video streams are stored or shared."
+        alert.informativeText = "Snapshot of Desktop wallpaper is required for functionality.\n\nAll video and audio and streams are ignored. Nothing is stored or shared."
         alert.alertStyle = .critical
         alert.addButton(withTitle: "Continue")
         let _ = alert.runModal()
@@ -334,11 +322,11 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
             self.BGTimer?.invalidate(); usleep(500_000); self.createDesktops()})    //;print("didChangeScreenParameters done  \(self.memoryFootprint())")})
         NCdefault.addObserver(forName: .doHide, object: nil, queue: .main, using: {_ in self.doHide() })
         let WSsharedNC = NSWorkspace.shared.notificationCenter
-        WSsharedNC.addObserver(forName: NSWorkspace.screensDidSleepNotification, object: nil, queue: .main, using: {_ in self.BGTimer?.invalidate()  })//; print("didSleep") })
+        WSsharedNC.addObserver(forName: NSWorkspace.screensDidSleepNotification, object: nil, queue: .main, using: {_ in self.BGTimer?.invalidate()  })
         WSsharedNC.addObserver(forName: NSWorkspace.screensDidWakeNotification, object: nil, queue: .main, using: {_ in //print("didWake \(self.memoryFootprint())")
             usleep(500_000); self.updateDesktops(true)}) //; print("didWake done \(self.memoryFootprint())") })
         WSsharedNC.addObserver(forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main, using: { _ in //print("activeSpaceDidChange  \(self.memoryFootprint())")
-            self.BGTimer?.invalidate(); usleep(150_000);  self.updateDesktops(true)})   //;print("activeSpaceDidChange done \(self.memoryFootprint())")}) //ugh! FIXME apple
+            self.BGTimer?.invalidate(); usleep(150_000);  self.updateDesktops(true)})   //ugh! FIXME apple
         
         // this should capture in/out of Dark Mode
         if #available(OSX 10.14, *) {
