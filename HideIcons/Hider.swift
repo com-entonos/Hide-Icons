@@ -229,6 +229,7 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         }   //;print("number of myDesktops:\(myDesktops.count), \(NSScreen.screens.count)")
         guessImage()
         myDesktops.forEach({_, win in win.orderFrontRegardless()})
+        backupDesktops.forEach({win in if win.beingUsed {win.orderFrontRegardless()}})
 
         //getDesktopArray().reduce(0,{$1[kCGWindowIsOnscreen as String] as? Bool ?? false})
         //print("createDesktops, myDesktop.count=\(myDesktops.count) (\(myDesktops.reduce(0) {n, w in return n + (w.value.screen != nil ? 1 : 0)})) number of CGDesktop on screen: \(getDesktopArray().reduce(0) { numOnScreen, window in let onScreen = window[kCGWindowIsOnscreen as String] as? Bool ?? false; return numOnScreen + (onScreen ? 1 : 0)}) number of monitors: \(Set(myDesktops.map({$0.value.screen})).count)")
@@ -361,6 +362,8 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         NCdefault.removeObserver(self, name: NSApplication.didChangeScreenParametersNotification, object: nil)
         NCdefault.removeObserver(self, name: .createDesktops, object: nil)
         NCdefault.removeObserver(self, name: .desktopType, object: nil)
+        myDesktops.forEach({$0.value.close()})  // should not be necessary, but make sure we don't leave anything on screen
+        backupDesktops.forEach({$0.close()})
         myDesktops.removeAll(); backupDesktops.removeAll() // and free up screen/window dictionary
     }
     
