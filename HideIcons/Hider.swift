@@ -46,6 +46,10 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
             self.animationBehavior = .none
         }
         
+        func setWin(image : CGImage, onScreen: Bool, hidden: Bool) {  //given image, create NSImageView
+            let nsImage = NSImage(cgImage: image, size: NSZeroSize)
+            self.setWin(imageView: NSImageView(image: nsImage), onScreen: onScreen, hidden: hidden)
+        }
         func setWin(imageView: NSImageView, onScreen: Bool, hidden: Bool) { // update picture and pin if we found the correct Space
             self.contentView = nil; self.contentView = imageView
             if onScreen && !self.collectionBehavior.contains(.stationary) {
