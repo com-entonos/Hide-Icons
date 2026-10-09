@@ -302,7 +302,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				MARKETING_VERSION = 27;
+				MARKETING_VERSION = 2.27;
 				PRODUCT_BUNDLE_IDENTIFIER = com.entonos.HideIcons;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -345,7 +345,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				MARKETING_VERSION = 27;
+				MARKETING_VERSION = 2.27;
 				PRODUCT_BUNDLE_IDENTIFIER = com.entonos.HideIcons;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
