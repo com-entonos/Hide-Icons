@@ -195,6 +195,18 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         } while true
     }
     
+    func addDesktop(cgWin: CGWindowID, frame: CGRect, onScreen: Bool ) {
+        let h0 = NSHeight(NSScreen.screens[0].frame)
+        let origin = CGPoint(x: frame.origin.x, y: h0 - frame.origin.y - frame.height)
+        let rect = CGRect(origin: origin, size: frame.size)
+        if let w = myDesktops[cgWin] {
+            w.reset(contentRect: rect, hidden: hidden)
+            NSLog("Hide Icons: [\(cgWin)] reset window, frame=\(frame), onScreen=\(onScreen)")
+        } else {
+            myDesktops[cgWin] = MyWindow(contentRect: rect, hidden: hidden)
+            NSLog("Hide Icons: [\(cgWin)] new window, frame=\(frame), onScreen=\(onScreen)")
+        }
+    }
     func createDesktops() { //print("createDesktops, myDesktop.count=\(myDesktops.count)")     // make window for each desktop
         BGTimer?.invalidate()   // stop any timer
         
