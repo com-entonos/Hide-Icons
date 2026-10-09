@@ -298,7 +298,7 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
     func showAlert() {
         let alert = NSAlert()
         alert.messageText = "Hide Icons Requires Permissions"
-        alert.informativeText = "Snapshot of Desktop wallpaper is required for functionality.\n\nAll video and audio and streams are ignored. Nothing is stored or shared."
+        alert.informativeText = "Snapshot of Desktop wallpaper is required for functionality.\n\nAll video and audio streams are ignored. Nothing is stored or shared."
         alert.alertStyle = .critical
         alert.addButton(withTitle: "Continue")
         let _ = alert.runModal()
