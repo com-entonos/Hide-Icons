@@ -226,14 +226,20 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
     var numberOfDesktops: Int {
         get { return getDesktopArray().count }
     }
-    // given a point on screen, return the Desktop image and color
-    func desktopFromPoint(_ point : CGPoint, color : NSColor) -> (CGImage?, NSColor, Bool) {
+    // Given a point on screen, return a small preview image
+    func desktopFromPoint(_ point: CGPoint, color: NSColor, thumbnailSize: NSSize) -> (NSImage?, NSColor, Bool) {
         for screen in NSScreen.screens.filter({return $0.frame.contains(point)}) {
             for cgID in getDesktopArray(.optionOnScreenOnly).map({ $0[kCGWindowNumber as String] as! CGWindowID}) {
-                if myDesktops[cgID]?.screen == screen {
-                    guard let cgImage = CGWindowListCreateImage(.null, [.optionIncludingWindow], cgID, [.nominalResolution]) else { continue }
-                    return (cgImage, myDesktops[cgID]!.color ?? color, myDesktops[cgID]!.color != nil)
+                guard let win = myDesktops[cgID], win.screen == screen else { continue }
+                let thumbnail = win.lastGoodImage.map { cgImage -> NSImage in
+                    let thumb = NSImage(size: thumbnailSize)
+                    thumb.lockFocus()
+                    NSGraphicsContext.current?.imageInterpolation = .high
+                    NSImage(cgImage: cgImage, size: NSZeroSize).draw(in: NSRect(origin: .zero, size: thumbnailSize), from: .zero, operation: .copy, fraction: 1.0)
+                    thumb.unlockFocus()
+                    return thumb
                 }
+                return (thumbnail, win.color ?? color, win.color != nil)
             }
         }
         return (nil, color, false)

@@ -3,6 +3,7 @@
 //  HideIcons
 //
 //  Created by parker on 4/25/21.
+//  Copyright © 2026 G.J. Parker. All rights reserved.
 //
 
 import Cocoa
@@ -102,7 +103,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
     
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-
         if statusBarItem == nil { statusBarItem = setStatusBarItem(image: sbiPicture) }
         sbiHidden = false
         return false
@@ -144,6 +144,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             statusBarItem!.button!.performClick(nil) // pass the click along
         }
     }
+    // to support macOS 27 on pre27. Raw value 1 == NSMenuItem.ImageVisibility.visible
+    private func forceImageVisible(_ item: NSMenuItem) {
+        guard #available(macOS 27.0, *) else { return }
+        let setter = NSSelectorFromString("setPreferredImageVisibility:")
+        guard item.responds(to: setter) else { return }   // safe no-op if the property doesn't exist here
+        item.setValue(1, forKey: "preferredImageVisibility")
+    }
+
     // construct menu
     func constructMenu(_ hidden : Bool) -> NSMenu? {
         let menu = NSMenu()
@@ -184,8 +192,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         
         // desktop menual > submenu of solid color oractual for just this screen or all
         if hidden {
-        let (currentImage, currentColor, currentlyColored) = hider!.desktopFromPoint(NSEvent.mouseLocation, color: desktopColor)
-        let previewSize = NSSize(width: 20, height: 20); lastDesktopColor = currentColor
+        let previewSize = NSSize(width: 20, height: 20)
+        let (currentImage, currentColor, currentlyColored) = hider!.desktopFromPoint(NSEvent.mouseLocation, color: desktopColor, thumbnailSize: previewSize)
+        lastDesktopColor = currentColor
         let bgSubMenu = NSMenu()
         let bgMenuItem = NSMenuItem()
         bgMenuItem.title = "Set Desktop wallpaper"
@@ -194,12 +203,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         bgSubMenu.addItem(bgT1)
         if hider!.numberOfDesktops > 1 {
             let bgMI = NSMenuItem(title: "actual", action: #selector(self.selectDesktop(_:)), keyEquivalent: "")
-            if let desktopImage = currentImage { bgMI.image = NSImage(cgImage: desktopImage, size: previewSize) }
+            bgMI.image = currentImage
+            forceImageVisible(bgMI)
             bgMI.state = !currentlyColored && desktop != .allDesktop && desktop != .allSolidColorDesktop ? NSControl.StateValue.on : NSControl.StateValue.off
             bgMI.tag = 1
             bgSubMenu.addItem(bgMI)
             let scMI = NSMenuItem(title: "color", action: #selector(self.selectDesktop(_:)), keyEquivalent: "")
             scMI.image = NSImage.swatchWithColor(color: currentColor, size: previewSize)
+            forceImageVisible(scMI)
             scMI.state = currentlyColored && desktop != .allDesktop && desktop != .allSolidColorDesktop ? NSControl.StateValue.on : NSControl.StateValue.off
             scMI.tag = 2
             bgSubMenu.addItem(scMI)
@@ -209,12 +220,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         // note if only one screen (monitor), MenuItem has tags > 2
         let abgMI = NSMenuItem(title: "actual", action: #selector(self.selectDesktop(_:)), keyEquivalent: "")
-        if let desktopImage = currentImage { abgMI.image = NSImage(cgImage: desktopImage, size: previewSize) }
+        abgMI.image = currentImage
+        forceImageVisible(abgMI)
         abgMI.state = desktop == .allDesktop ? NSControl.StateValue.on : NSControl.StateValue.off
         abgMI.tag = 3
         bgSubMenu.addItem(abgMI)
         let ascMI = NSMenuItem(title: "color", action: #selector(self.selectDesktop(_:)), keyEquivalent: "")
         ascMI.image = NSImage.swatchWithColor(color: currentColor, size: previewSize)
+        forceImageVisible(ascMI)
         ascMI.state = desktop == .allSolidColorDesktop ? NSControl.StateValue.on : NSControl.StateValue.off
         ascMI.tag = 4
         bgSubMenu.addItem(ascMI)
