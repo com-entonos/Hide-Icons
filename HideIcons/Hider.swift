@@ -63,6 +63,7 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
     private var BGTime = TimeInterval(730000.0)         // time interveral for lazy updates
     private var hidden_ = false                         // are icons hidden?
     private var observation: NSKeyValueObservation?     // Apple doc- to detect dark/light mode switch
+    private var currentImages : [CGRect : CGImage] = [:]  // copy of background image being shown for screen
     
     var hidden: Bool {                          // are icons currently hidden?
         get { return hidden_ }
