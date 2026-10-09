@@ -6,7 +6,7 @@
 //
 
 import Cocoa
-//@preconcurrency import ScreenCaptureKit
+import ScreenCaptureKit   // macOS 27+ capture path — CGWindowListCreateImage stopped returning real pixel data for the Desktop window
 
 extension Notification.Name {
     static let doHide = NSNotification.Name("doHide")                       //toggle hide/show Desktop icons
@@ -98,6 +98,44 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         }
     }
 
+    @available(macOS 27.0, *)
+    private func refreshDesktopImage( cgWin: CGWindowID, win: MyWindow, onScreen: Bool) {
+        let scale = win.screen?.backingScaleFactor ?? 1
+        let origin = win.frame.origin
+        Task {
+            do {
+                //let content0 = try await SCShareableContent.current  //everything we are allowed?
+                let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: onScreen)
+                guard let desktopWindow = content.windows.first(where: { $0.windowID == cgWin }) else { return }
+                
+                //print("isOnScreen: \(desktopWindow.isOnScreen), isActive: \(desktopWindow.isActive), frame: \(desktopWindow.frame)")
+                let config = SCStreamConfiguration()
+                config.width = Int((desktopWindow.frame.width * scale).rounded())
+                config.height = Int((desktopWindow.frame.height * scale).rounded())
+                config.showsCursor = false
+                config.captureResolution = .best
+                
+                //guard let targetDisplay = content.displays.first(where: { $0.frame.contains(origin) }) else { return }
+                //guard let targetWindow = content.windows.first(where: { $0.windowID == cgWin }) else { return }
+                //let filter = SCContentFilter(display: targetDisplay, excludingApplications: content.applications, exceptingWindows: [])
+                let filter = SCContentFilter(desktopIndependentWindow: desktopWindow)
+                let cgImage = try await SCScreenshotManager.captureImage( contentFilter: filter, configuration: config)
+                
+                await MainActor.run {
+                    // Avoid applying an old async result to a reused window.
+                    guard self.myDesktops[cgWin] === win else { return }
+                    
+                    win.lastGoodImage = cgImage
+                    currentImages[win.frame] = cgImage
+                    win.setWin(image: cgImage, onScreen: onScreen, hidden: self.hidden)
+                }
+            } catch {
+                NSLog("Desktop capture failed: \(error)")
+            }
+        }
+        
+            
+    }
     func updateDesktops(_ doAll : Bool = false) {  // update pictures of Desktop(s)
         BGTimer?.invalidate()           // stop any timers
         //print("updateDesktops, doAll=\(doAll) number of myDesktops:\(myDesktops.count), screens:\(Set(myDesktops.map({$0.value.screen})).count) (\(myDesktops.reduce(0) {n, w in return n + (w.value.screen != nil ? 1 : 0)}))  (\(NSScreen.screens.count)) number of CGDesktop on screen: \(getDesktopArray().reduce(0) { numOnScreen, window in let onScreen = window[kCGWindowIsOnscreen as String] as? Bool ?? false; return numOnScreen + (onScreen ? 1 : 0)}) \(memoryFootprint()) # of backups:\(backupDesktops.count)")
@@ -118,13 +156,18 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
             let imageView = NSImageView(image: image)
             imageView.imageScaling = .scaleAxesIndependently
             win.setWin(imageView: imageView, onScreen: onScreen, hidden: hidden)
+            return
+        }
+
+        if #available(macOS 27.0, *) {
+            if onScreen { refreshDesktopImage(cgWin: cgWin, win: win, onScreen: onScreen) }
+            //refreshDesktopImage(cgWin: cgWin, win: win, onScreen: onScreen)
         } else {
             guard let cgImage = CGWindowListCreateImage(CGRectNull, [.optionIncludingWindow], cgWin, [.bestResolution]) else { return }
-            let image = NSImage(cgImage: cgImage, size: NSZeroSize)
-            let imageView = NSImageView(image: image)
-            win.setWin(imageView: imageView, onScreen: onScreen, hidden: hidden)
+            win.lastGoodImage = cgImage
+            //currentImages[win.frame] = cgImage  //shouldn't be necessary
+            win.setWin(image: cgImage, onScreen: onScreen, hidden: hidden)
         }
-        //print(cgWin, onScreen, win.isOnActiveSpace, hidden, win == nil, win.level == hiddenLayer, win.level == floatLayer, win.level == staticLayer)
     }
     
     func getDesktopArray(_ option: CGWindowListOption = .optionAll) -> [[String: AnyObject]] {
@@ -254,8 +297,24 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         }
         updateDesktops(desktop == .allDesktop || desktop == .allSolidColorDesktop)  // will also restart timer
     }
+
+    @available(macOS 27.0, *)
+    func showAlert() {
+        let alert = NSAlert()
+        alert.messageText = "Hide Icons Requires Permissions"
+        alert.informativeText = "Snapshot of Desktop wallpaper is required for functionality.\n\nNo snapshots, audio or video streams are stored or shared."
+        alert.alertStyle = .critical
+        alert.addButton(withTitle: "Continue")
+        let _ = alert.runModal()
+        //if !CGRequestScreenCaptureAccess() {NSApp.terminate(nil)}
+        CGRequestScreenCaptureAccess()
+    }
     // set up initial window lists for each screen and observers
     init() {
+        if #available(macOS 27.0, *) {
+            // Checks whether Screen Recording access is already granted, and if not, triggers the system's standard permission dialog.
+            if !CGPreflightScreenCaptureAccess() { showAlert() }
+        }
         hidden = ( UserDefaults.standard.object(forKey: "hidden") == nil) ? true : UserDefaults.standard.bool(forKey: "hidden")
         createDesktops() // go grab all the Desktops
         
