@@ -34,7 +34,6 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         
         func reset(contentRect: NSRect, hidden: Bool) {
             self.setFrame(contentRect, display: true)   // force the correct frame for window
-            //if #available(macOS 13.0, *) { self.collectionBehavior = [.canJoinAllSpaces, .canJoinAllApplications, .fullScreenNone, .ignoresCycle] } else { self.collectionBehavior = [.canJoinAllSpaces, .fullScreenNone, .ignoresCycle] }
             self.collectionBehavior = [.canJoinAllSpaces, .fullScreenNone, .ignoresCycle]
             self.level = hidden ? .floatLayer : .hiddenLayer
             //self.orderFrontRegardless() //place on top of this level
@@ -112,7 +111,6 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
     
     func setImageView(cgWin: CGWindowID, win : MyWindow, onScreen : Bool) {
         if let color = win.color {
- //           let image = NSImage.swatchWithColor(color: color, size: win.frame.size) // this too way too much memory, do 1x1 and the scaleAxesIndependently to fill in full desktop
             let image = NSImage.swatchWithColor(color: color, size: NSSize(width: 1, height: 1))
             let imageView = NSImageView(image: image)
             imageView.imageScaling = .scaleAxesIndependently
@@ -129,17 +127,6 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
     func getDesktopArray(_ option: CGWindowListOption = .optionAll) -> [[String: AnyObject]] {
         var nTry = 0
         repeat {
-            /*let desktopWindowLevel = CGWindowLevelForKey(.desktopWindow) - 1                                // level of Desktop background image
-            if #available(macOS 12.3, *) {
-                SCShareableContent.getExcludingDesktopWindows(false, onScreenWindowsOnly: option == .optionOnScreenOnly, completionHandler: {(sharableContent, error) in
-                    let windows = sharableContent?.windows.filter({$0.windowLayer == desktopWindowLevel})
-                    let displays = sharableContent?.displays ?? []
-                    //displays.filter({$0.description == <#T##SCDisplay#>.id})
-                    let filter = SCContentFilter(desktopIndependentWindow: <#T##SCWindow#>)
-                })
-            } else {
-                // Fallback on earlier versions
-            }*/
             // need to find Desktop windows... (let's use apple's approved way so we don't trip up security guards)
             let windows = CGWindowListCopyWindowInfo([option], kCGNullWindowID)! as! [[String: AnyObject]]  // get (all or onscreen) windows
             let desktopWindowLevel = CGWindowLevelForKey(.desktopWindow) - 1                                // level of Desktop background image
@@ -147,19 +134,6 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
                 let windowLevel = $0[kCGWindowLayer as String] as! CGWindowLevel
                 return windowLevel == desktopWindowLevel
             }
-/*
-            let desktopIconWindowLevel = CGWindowLevelForKey(.desktopIconWindow) //- 1                                // level of Desktop background image
-            let desktopIconWindows = windows.filter {                                                           // get array of dictionaries for Desktop CGWindows
-                let windowLevel = $0[kCGWindowLayer as String] as! CGWindowLevel
-                return windowLevel == desktopIconWindowLevel
-            }
-            print("number of desktopIconWindows: \(desktopIconWindows.count)")
-            for win in desktopIconWindows {
-                print(win[kCGWindowBounds as String],win[kCGWindowOwnerPID as String],win[kCGWindowOwnerName as String],win[kCGWindowLayer as String],win[kCGWindowIsOnscreen as String] as? Bool ?? false)
-            }
-            for win in backupDesktops { print(win.isOpaque,win.isVisible,win.orderedIndex,win.level)}
-            print("number of desktops: \(desktopWindows.count)")
-*/
             var screenRect: [CGRect] = []
             let numOnScreen = desktopWindows.reduce(0) { numOnScreen, window in             // find the number of desktops onScreen and also construct array of unique screen CGRects
                 let rect = CGRect(dictionaryRepresentation: window[kCGWindowBounds as String] as! CFDictionary)!
