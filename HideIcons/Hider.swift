@@ -26,6 +26,7 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
     class MyWindow : NSWindow { // just add some data and methods for NSWindow- this will hold a window w/ a Desktop pic
         var color: NSColor? = nil   // display solid color instead of actual Desktop? nil means actual, otherwise that color
         var beingUsed = false
+        var lastGoodImage: CGImage? = nil   // cache of the last successful capture; reused on failure and for menu previews
         
         init(contentRect: NSRect, hidden: Bool) {
             super.init(contentRect: contentRect, styleMask: .borderless, backing: .buffered, defer: false) // create NSWindow
@@ -105,6 +106,7 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
                 setImageView(cgWin: cgWin, win: win, onScreen: onScreen)    //;print(cgWin,myDesktops[cgWin]!.frame,onScreen,myDesktops[cgWin]!.collectionBehavior.contains(.stationary),hidden)
             }  //else { print("    OOPS- \(cgWin) is not in MyDesktops!") }
         } //;print(" ")
+        guessImage()
         doTimer()                                           // restart any timers
         //print("number of myDesktops:\(myDesktops.count), screens:\(Set(myDesktops.map({$0.value.screen})).count), NSScreen:\(NSScreen.screens.count) \(memoryFootprint())")
     }
@@ -174,12 +176,29 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         for cgID in myDesktops.filter({ return !$0.value.beingUsed}).keys { //print(cgID,myDesktops[cgID]!.frame,myDesktops[cgID]!.beingUsed)   // remove any myDesktops that are not being used
             myDesktops[cgID]?.orderOut(nil); myDesktops.removeValue(forKey: cgID)//if let myD = myDesktops.removeValue(forKey: cgID) {myD.close()}    //?.close()
         }   //;print("number of myDesktops:\(myDesktops.count), \(NSScreen.screens.count)")
+        guessImage()
         myDesktops.forEach({_, win in win.orderFrontRegardless()})
 
         //getDesktopArray().reduce(0,{$1[kCGWindowIsOnscreen as String] as? Bool ?? false})
         //print("createDesktops, myDesktop.count=\(myDesktops.count) (\(myDesktops.reduce(0) {n, w in return n + (w.value.screen != nil ? 1 : 0)})) number of CGDesktop on screen: \(getDesktopArray().reduce(0) { numOnScreen, window in let onScreen = window[kCGWindowIsOnscreen as String] as? Bool ?? false; return numOnScreen + (onScreen ? 1 : 0)}) number of monitors: \(Set(myDesktops.map({$0.value.screen})).count)")
         doTimer()
         //print("number of myDesktops:\(myDesktops.count), screens:\(Set(myDesktops.map({$0.value.screen})).count) \(memoryFootprint())")
+    }
+
+    func guessImage() {
+        if #available(macOS 27.0, *) {
+            Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false, block: { _ in
+                self.currentImages.forEach({frame, image in
+                    self.myDesktops.forEach({cgID , win in
+                        if !win.collectionBehavior.contains(.stationary) && win.frame == frame  {
+                            win.lastGoodImage = image
+                            win.setWin(image: image, onScreen: false, hidden: self.hidden)
+                            win.orderFrontRegardless()
+                        }
+                    })
+                })
+            })
+        }
     }
     func createBackups() {
         backupDesktops.forEach({ win in win.beingUsed = false; win.orderOut(nil); win.level = .hiddenLayer })
