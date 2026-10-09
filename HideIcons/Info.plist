@@ -31,13 +31,13 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>LSUIPresentationMode</key>
-	<real>0</real>
-	<key>NSDownloadsFolderUsageDescriptionNSDownloadsFolderUsageDescription</key>
-	<string>So we can download a new version of Hide Icons.</string>
+	<real>0.0</real>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2026 G.J. Parker (entonos)</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>NSScreenCaptureUsageDescription</key>
+	<string>Snapshot of Desktop wallpaper required for functionality.</string>
 	<key>NSServices</key>
 	<array>
 		<dict>
