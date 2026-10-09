@@ -140,10 +140,9 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         BGTimer?.invalidate()           // stop any timers
         //print("updateDesktops, doAll=\(doAll) number of myDesktops:\(myDesktops.count), screens:\(Set(myDesktops.map({$0.value.screen})).count) (\(myDesktops.reduce(0) {n, w in return n + (w.value.screen != nil ? 1 : 0)}))  (\(NSScreen.screens.count)) number of CGDesktop on screen: \(getDesktopArray().reduce(0) { numOnScreen, window in let onScreen = window[kCGWindowIsOnscreen as String] as? Bool ?? false; return numOnScreen + (onScreen ? 1 : 0)}) \(memoryFootprint()) # of backups:\(backupDesktops.count)")
         
-        for (cgWin, onScreen) in getDesktopArray(doAll ? .optionAll : .optionOnScreenOnly).map({ ($0[kCGWindowNumber as String] as! CGWindowID, $0[kCGWindowIsOnscreen as String] as? Bool ?? false)}) {
-            if let win = myDesktops[cgWin] { //print("cgWin=\(cgWin), onScreen=\(onScreen), stationary?\(myDesktops[cgWin]?.collectionBehavior == .stationary)")
-                setImageView(cgWin: cgWin, win: win, onScreen: onScreen)    //;print(cgWin,myDesktops[cgWin]!.frame,onScreen,myDesktops[cgWin]!.collectionBehavior.contains(.stationary),hidden)
-            }  //else { print("    OOPS- \(cgWin) is not in MyDesktops!") }
+        for (cgWin, onScreen, frame) in getDesktopArray(doAll ? .optionAll : .optionOnScreenOnly).map({ ($0[kCGWindowNumber as String] as! CGWindowID, $0[kCGWindowIsOnscreen as String] as? Bool ?? false, CGRect(dictionaryRepresentation: $0[kCGWindowBounds as String] as! CFDictionary)!)}) {
+            if myDesktops[cgWin] == nil { addDesktop(cgWin: cgWin, frame: frame, onScreen: onScreen) }
+            setImageView(cgWin: cgWin, win: myDesktops[cgWin]!, onScreen: onScreen)
         } //;print(" ")
         guessImage()
         doTimer()                                           // restart any timers
