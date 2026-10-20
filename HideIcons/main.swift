@@ -42,11 +42,15 @@ if CommandLine.arguments.contains("--watchdog"), // are we watchdog?
      if #unavailable(macOS 14.0) {hideDesktopIcons = UserDefaults(suiteName: "com.apple.finder")?.bool(forKey: "CreateDesktop") ?? true}
      
      // Spawn watchdog before spinning up AppKit
-     let execURL = URL(fileURLWithPath: CommandLine.arguments[0])
+     //let execURL = URL(fileURLWithPath: CommandLine.arguments[0])
+     let execURL = Bundle.main.executableURL ?? URL(fileURLWithPath: CommandLine.arguments[0])
      let PID = getpid()
      let watchdog = Process()
      watchdog.executableURL = execURL
      watchdog.arguments = ["--watchdog", String(hideDesktopIcons), String(PID)]
+     var env = ProcessInfo.processInfo.environment
+     env["XPC_SERVICE_NAME"] = "0"
+     watchdog.environment = env
      do { try watchdog.run() } catch { NSLog("Failed to fire watchdog background listener: \(error)") }
      
      // continue...
