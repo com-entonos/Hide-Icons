@@ -16,7 +16,7 @@ extension Notification.Name {
 }
 
 extension NSWindow.Level {
-    static let hiddenLayer = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopWindow))-2)
+    //static let hiddenLayer = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopWindow))-2)
     static let floatLayer  = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopIconWindow))+1)
     static let staticLayer = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopIconWindow))+5)
 }
@@ -36,8 +36,14 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         func reset(contentRect: NSRect, hidden: Bool) {
             self.setFrame(contentRect, display: true)   // force the correct frame for window
             self.collectionBehavior = [.canJoinAllSpaces, .fullScreenNone, .ignoresCycle]
-            self.level = hidden ? .floatLayer : .hiddenLayer
+            //self.level = hidden ? .floatLayer : .hiddenLayer
             //self.orderFrontRegardless() //place on top of this level
+            if hidden {
+                self.level = .floatLayer
+                self.orderFrontRegardless()
+            } else {
+                self.orderOut(nil)
+            }
             self.beingUsed = true
             // rest is to make the window dumb
             self.canHide = false; self.isExcludedFromWindowsMenu = true; self.isOpaque = true
@@ -46,28 +52,26 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
             self.animationBehavior = .none
         }
         
-        func setWin(image : CGImage, onScreen: Bool, hidden: Bool) {  //given image, create NSImageView
-            let nsImage = NSImage(cgImage: image, size: NSZeroSize)
-            self.setWin(imageView: NSImageView(image: nsImage), onScreen: onScreen, hidden: hidden)
+        func setWin(image : CGImage?, onScreen: Bool, hidden: Bool) {  //given image, create NSImageView
+            let nsImageView = image == nil ? nil : NSImageView(image: NSImage(cgImage: image!, size: NSZeroSize))
+            self.setWin(imageView: nsImageView, onScreen: onScreen, hidden: hidden)
         }
-        func setWin(imageView: NSImageView, onScreen: Bool, hidden: Bool) { // update picture and pin if we found the correct Space
+        func setWin(imageView: NSImageView?, onScreen: Bool, hidden: Bool) { // update picture and pin if we found the correct Space
             self.contentView = nil; self.contentView = imageView
             if onScreen && !self.collectionBehavior.contains(.stationary) {
                 // pin this window to this Space
                 self.collectionBehavior = [.stationary, .fullScreenNone, .ignoresCycle]
-                self.level = hidden ? .staticLayer : .hiddenLayer //; print("set")    // move to top of this level
+                self.level = .staticLayer
             }
-            //print("in setWin, beingUsed=\(self.beingUsed), onScreen=\(onScreen) \(self.isOnActiveSpace), hidden=\(hidden), stationary?=\(self.collectionBehavior.contains(.stationary)), screen.frame==frame?\(self.screen?.frame == self.frame), frame=\(self.frame)")
+            if !hidden || imageView == nil {self.orderOut(nil)} else {self.orderFrontRegardless()}
         }
     }
     
     private var myDesktops : [ CGWindowID : MyWindow] = [:] //
-    private var backupDesktops : [ MyWindow] = []
     private var BGTimer : Timer?                        // lazy update for Desktop pics
     private var BGTime = TimeInterval(730000.0)         // time interveral for lazy updates
     private var hidden_ = false                         // are icons hidden?
     private var observation: NSKeyValueObservation?     // Apple doc- to detect dark/light mode switch
-    private var currentImages : [CGRect : CGImage] = [:]  // copy of background image being shown for screen
     
     var hidden: Bool {                          // are icons currently hidden?
         get { return hidden_ }
@@ -77,14 +81,17 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
     func doHide() { //print("in doHide, hidden=\(!hidden), empty myDesktops?\(myDesktops.isEmpty)")
         hidden = !hidden        // toggle hide/show icons
         UserDefaults.standard.set(hidden, forKey: "hidden") // save state
-        if hidden {             // appears the user want to hide icons
-            updateDesktops(true) // force all Desktops to be updated
-            backupDesktops.filter({return $0.beingUsed}).forEach({win in win.level = .floatLayer})
-            myDesktops.forEach({_, win in win.level = win.collectionBehavior.contains(.stationary) ? .staticLayer : .floatLayer})
+        updateDesktops(true) // force all Desktops to be updated
+        if !hidden { BGTimer?.invalidate() }       // stop timer since icons are not hidden
+        if #available(macOS 14.0, *) {
+            let domain = "com.apple.WindowManager" as CFString
+            CFPreferencesSetAppValue("StandardHideDesktopIcons" as CFString, hidden as CFPropertyList, domain)
+            CFPreferencesAppSynchronize(domain)
         } else {
-            BGTimer?.invalidate()        // stop timer since icons are not hidden
-            myDesktops.forEach({ _, win in win.level = .hiddenLayer})    // don't show any of the Desktop windows
-            backupDesktops.forEach({win in win.level = .hiddenLayer})
+            let domain = "com.apple.finder" as CFString
+            CFPreferencesSetAppValue("CreateDesktop" as CFString, !hidden as CFPropertyList, domain)
+            CFPreferencesAppSynchronize(domain)
+            if let finderApp = NSWorkspace.shared.runningApplications.first(where: { $0.bundleIdentifier == "com.apple.finder" }) { finderApp.terminate() }
         }
     }
     // start a repeating timer to update all Desktops
@@ -102,47 +109,35 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         }
     }
 
-    @available(macOS 27.0, *)
-    private func refreshDesktopImage( cgWin: CGWindowID, win: MyWindow, onScreen: Bool) {
-        let scale = win.screen?.backingScaleFactor ?? 1
-        let origin = win.frame.origin
-        Task {
-            do {
-                //let content0 = try await SCShareableContent.current  //everything we are allowed?
-                let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: onScreen)
-                guard let desktopWindow = content.windows.first(where: { $0.windowID == cgWin }) else { return }
-                
-                //print("isOnScreen: \(desktopWindow.isOnScreen), isActive: \(desktopWindow.isActive), frame: \(desktopWindow.frame)")
-                let config = SCStreamConfiguration()
-                config.width = Int((desktopWindow.frame.width * scale).rounded())
-                config.height = Int((desktopWindow.frame.height * scale).rounded())
-                config.showsCursor = false
-                config.captureResolution = .best
-                
-                let filter = SCContentFilter(desktopIndependentWindow: desktopWindow)
-                let cgImage = try await SCScreenshotManager.captureImage( contentFilter: filter, configuration: config)
-                
-                await MainActor.run {
-                    // Avoid applying an old async result to a reused window.
-                    guard self.myDesktops[cgWin] === win else { return }
-                    
-                    win.lastGoodImage = cgImage
-                    currentImages[win.frame] = cgImage
-                    win.setWin(image: cgImage, onScreen: onScreen, hidden: self.hidden)
-                }
-            } catch {
-                NSLog("Desktop capture failed: \(error)")
-            }
-        }
-    }
-    func updateDesktops(_ doAll : Bool = false) {  // update pictures of Desktop(s)
+    func updateDesktops(_ doAll : Bool = false, _ reset : Bool = false) {  // update pictures of Desktop(s)
         BGTimer?.invalidate()           // stop any timers
-        
+        print("doAll? \(doAll), reset? \(reset)")
+        var showingDesktop : [NSScreen:MyWindow] = [:]
         for (cgWin, onScreen, frame) in getDesktopArray(doAll ? .optionAll : .optionOnScreenOnly).map({ ($0[kCGWindowNumber as String] as! CGWindowID, $0[kCGWindowIsOnscreen as String] as? Bool ?? false, CGRect(dictionaryRepresentation: $0[kCGWindowBounds as String] as! CFDictionary)!)}) {
-            if myDesktops[cgWin] == nil { addDesktop(cgWin: cgWin, frame: frame, onScreen: onScreen) }
+            if reset || myDesktops[cgWin] == nil { addDesktop(cgWin: cgWin, frame: frame) }
             setImageView(cgWin: cgWin, win: myDesktops[cgWin]!, onScreen: onScreen)
+            if onScreen { showingDesktop[myDesktops[cgWin]!.screen!] = myDesktops[cgWin] }
         }
-        guessImage()
+        showingDesktop.forEach({screen, win in
+            if win.color == nil || !hidden {
+                myDesktops.forEach({cgWin, w in if win.screen == screen && !w.collectionBehavior.contains(.stationary) {w.orderOut(nil)} })
+            } else {
+                myDesktops.forEach({cgID, w in
+                    if w.screen == screen {
+                        if !hidden || w.color == nil {
+                            w.orderOut(nil)
+                        } else {
+                            w.level = w.collectionBehavior.contains(.stationary) ? .staticLayer : .floatLayer
+                            w.orderFrontRegardless()
+                        }
+                    }
+                })
+            }
+            print("screen: \(screen)")
+            myDesktops.forEach({cgID, w in if w.screen == screen {
+                print("cgID: \(cgID), color? \(w.color != nil), level: \(!w.isVisible ? "orderOut" : w.level == .floatLayer ? "float" : w.level == .staticLayer ? "static" :  "unknown"), onScreen? \(w === win), stationary? \(w.collectionBehavior.contains(.stationary))") }
+            })
+        })
         doTimer()                       // restart any timers
     }
     
@@ -152,16 +147,9 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
             let imageView = NSImageView(image: image)
             imageView.imageScaling = .scaleAxesIndependently
             win.setWin(imageView: imageView, onScreen: onScreen, hidden: hidden)
-            return
-        }
-
-        if #available(macOS 27.0, *) {
-            if onScreen { refreshDesktopImage(cgWin: cgWin, win: win, onScreen: onScreen) }
         } else {
-            guard let cgImage = CGWindowListCreateImage(CGRectNull, [.optionIncludingWindow], cgWin, [.bestResolution]) else { return }
-            win.lastGoodImage = cgImage
-            //currentImages[win.frame] = cgImage  //shouldn't be necessary
-            win.setWin(image: cgImage, onScreen: onScreen, hidden: hidden)
+            if #unavailable(macOS 27.0) { if let cgImage = CGWindowListCreateImage(CGRectNull, [.optionIncludingWindow], cgWin, [.bestResolution]) { win.lastGoodImage = cgImage} }
+            win.setWin(image: nil, onScreen: onScreen, hidden: hidden)
         }
     }
     
@@ -183,78 +171,38 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
                 return numOnScreen + (onScreen ? 1 : 0)
             }
             let n = screenRect.count
-            let good = n == NSScreen.screens.count || n == backupDesktops.count || n == backupDesktops.filter({return $0.beingUsed}).count
-            //print("numOnScreen=\(numOnScreen), screenRect.count=\(screenRect.count), backup.count=\(backupDesktops.filter({return $0.beingUsed}).count), screens.count=\(NSScreen.screens.count), good=\(good), nTry=\(nTry)")
+            let good = n == NSScreen.screens.count
             if (numOnScreen == screenRect.count && good) || nTry > 20 { return desktopWindows }
             usleep(150_000)
             nTry += 1   // FIX ME?
         } while true
     }
     
-    func addDesktop(cgWin: CGWindowID, frame: CGRect, onScreen: Bool ) {
+    func addDesktop(cgWin: CGWindowID, frame: CGRect) {
         let h0 = NSHeight(NSScreen.screens[0].frame)
         let origin = CGPoint(x: frame.origin.x, y: h0 - frame.origin.y - frame.height)
         let rect = CGRect(origin: origin, size: frame.size)
         if let w = myDesktops[cgWin] {
             w.reset(contentRect: rect, hidden: hidden)
-            NSLog("Hide Icons: [\(cgWin)] reset window, frame=\(frame), onScreen=\(onScreen)")
         } else {
             myDesktops[cgWin] = MyWindow(contentRect: rect, hidden: hidden)
-            NSLog("Hide Icons: [\(cgWin)] new window, frame=\(frame), onScreen=\(onScreen)")
         }
     }
     func createDesktops() { //print("createDesktops, myDesktop.count=\(myDesktops.count)")     // make window for each desktop
         BGTimer?.invalidate()   // stop any timer
         
-        createBackups()
-        
-        myDesktops.forEach({ _, win in win.beingUsed = false; win.level = .hiddenLayer; win.orderOut(nil) })  // assume window is not going to be used
-        for (cgID, onScreen, frame) in getDesktopArray().map({ ($0[kCGWindowNumber as String] as! CGWindowID, $0[kCGWindowIsOnscreen as String] as? Bool ?? false, CGRect(dictionaryRepresentation: $0[kCGWindowBounds as String] as! CFDictionary)!)}) {
-            addDesktop(cgWin: cgID, frame: frame, onScreen: onScreen)
-            setImageView(cgWin: cgID, win: myDesktops[cgID]!, onScreen: onScreen)
-        }
+        myDesktops.forEach({ _, win in win.beingUsed = false; win.orderOut(nil) })  // assume window is not going to be used
+        updateDesktops(true, true)
         // remove any myDesktops that are not being used
         for cgID in myDesktops.filter({ return !$0.value.beingUsed}).keys {
             myDesktops[cgID]?.orderOut(nil); myDesktops.removeValue(forKey: cgID)
         }
-        guessImage()
-        backupDesktops.forEach({win in if win.beingUsed {win.orderFrontRegardless()}})
-        myDesktops.forEach({_, win in win.orderFrontRegardless()})
+        myDesktops.forEach({_, win in if let _ = win.color {win.orderFrontRegardless()}})
+        hidden = !hidden; doHide()
         
         doTimer()
     }
 
-    // for macOS 27+, guess what new unseen Desktop will be the same as this Desktop...
-    func guessImage() {
-        if #available(macOS 27.0, *) {
-            Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false, block: { _ in
-                self.currentImages.forEach({frame, image in
-                    self.myDesktops.forEach({cgID , win in
-                        if !win.collectionBehavior.contains(.stationary) && win.frame == frame  {
-                            win.lastGoodImage = image
-                            win.setWin(image: image, onScreen: false, hidden: self.hidden)
-                            win.orderFrontRegardless()
-                        }
-                    })
-                })
-            })
-        }
-    }
-    func createBackups() {
-        backupDesktops.forEach({ win in win.beingUsed = false; win.orderOut(nil); win.level = .hiddenLayer })
-        while NSScreen.screens.count < 1 { usleep(150_000) }
-        let screens = NSScreen.screens
-        for (idx, screen) in screens.enumerated() {
-            if idx < backupDesktops.count {
-                backupDesktops[idx].reset(contentRect: screen.frame, hidden: hidden)
-            } else {
-                backupDesktops.append(MyWindow(contentRect: screen.frame, hidden: hidden))
-            }
-            backupDesktops[idx].color = .black
-            setImageView(cgWin: 0, win: backupDesktops[idx], onScreen: false)
-        }
-        backupDesktops.forEach({win in if win.beingUsed {win.orderFrontRegardless()}})
-    }
     // number of Desktops
     var numberOfDesktops: Int {
         get { return getDesktopArray().count }
@@ -294,23 +242,8 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         updateDesktops(desktop == .allDesktop || desktop == .allSolidColorDesktop)  // will also restart timer
     }
 
-    @available(macOS 27.0, *)
-    func showAlert() {
-        let alert = NSAlert()
-        alert.messageText = "Hide Icons Requires Permissions"
-        alert.informativeText = "Snapshot of Desktop wallpaper is required for functionality.\n\nAll video and audio streams are ignored. Nothing is stored or shared."
-        alert.alertStyle = .critical
-        alert.addButton(withTitle: "Continue")
-        let _ = alert.runModal()
-        //if !CGRequestScreenCaptureAccess() {NSApp.terminate(nil)}
-        CGRequestScreenCaptureAccess()
-    }
     // set up initial window lists for each screen and observers
     init() {
-        if #available(macOS 27.0, *) {
-            // Checks whether Screen Recording access is already granted, and if not, triggers the system's standard permission dialog.
-            if !CGPreflightScreenCaptureAccess() { showAlert() }
-        }
         hidden = ( UserDefaults.standard.object(forKey: "hidden") == nil) ? true : UserDefaults.standard.bool(forKey: "hidden")
         createDesktops() // go grab all the Desktops
         
@@ -339,6 +272,7 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
     }
     // tear down observers (is this really necessary?)
     deinit {
+        print("Hider.deinit called")
         observation?.invalidate(); BGTimer?.invalidate() // invalidate any background timers
         let WSsharedNC = NSWorkspace.shared.notificationCenter
         WSsharedNC.removeObserver(self, name: NSWorkspace.activeSpaceDidChangeNotification, object: nil)
@@ -351,8 +285,7 @@ class Hider {  // class that covers Desktop w/ pictures of Desktop- invoked by n
         NCdefault.removeObserver(self, name: .createDesktops, object: nil)
         NCdefault.removeObserver(self, name: .desktopType, object: nil)
         myDesktops.forEach({$0.value.close()})  // should not be necessary, but make sure we don't leave anything on screen
-        backupDesktops.forEach({$0.close()})
-        myDesktops.removeAll(); backupDesktops.removeAll() // and free up screen/window dictionary
+        myDesktops.removeAll()                 // and free up screen/window dictionary
     }
     
     func memoryFootprint() -> String {

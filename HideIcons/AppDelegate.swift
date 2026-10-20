@@ -8,7 +8,7 @@
 
 import Cocoa
 
-class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelegate {
 
     // status bar item
     var statusBarItem: NSStatusItem?
@@ -87,12 +87,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         
         // date the app started + 2 second
         startDate = Date(timeIntervalSinceNow: TimeInterval(2.0))
-        
         // keep track of app that had focus before us...
         NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main, using: {_ in
-            if let app = NSWorkspace.shared.frontmostApplication {
-                if app.bundleIdentifier != Bundle.main.object(forInfoDictionaryKey: "CFBundleIdentifier") as? String { self.previousApp = app }
-            }
+            if let app = NSWorkspace.shared.frontmostApplication, app.bundleIdentifier != Bundle.main.bundleIdentifier {self.previousApp = app}
         })
     }
     
@@ -301,15 +298,23 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         picker.showsAlpha = false
         picker.hidesOnDeactivate = false
         picker.isFloatingPanel = true
-        picker.setTarget(self)
-        picker.setAction(#selector(colorChosen(_:)))
+        picker.delegate = self
         picker.color = lastDesktopColor
         picker.collectionBehavior = .canJoinAllSpaces
         picker.makeKeyAndOrderFront(nil)
+        lastPickerColor = lastDesktopColor
     }
+    @objc func changeColor(_ sender: NSColorPanel) {
+        // Explicitly forward the call straight to your picker function
+        self.colorChosen(sender)
+    }
+    var lastPickerColor : NSColor = .black
     @objc func colorChosen(_ picker: NSColorPanel) { // we got a color
         desktopColor = NSColorPanel.shared.color //; print("in colorChosen \(desktop) \(desktopColor)")
-        NotificationCenter.default.post(name: .desktopType, object: (desktopColor, desktop, NSEvent.mouseLocation))
+        if desktopColor != lastPickerColor {
+            lastPickerColor = desktopColor
+            NotificationCenter.default.post(name: .desktopType, object: (desktopColor, desktop, NSEvent.mouseLocation))
+        }
     }
     // called when icons should hidden or shown
     @objc func toggle(_ sender: Any?) {
