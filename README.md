@@ -4,4 +4,4 @@ Hide Icons
 
 Simple AppKit that's just a menu item that hides/shows Desktop icons.
 
-In the unsandbox branch, we simply toggle a System Setting to Show (or not) items On Desktop. This reduces memory requirements and allows for continuous updates of the actual Desktop background/wallpaper.
+In the nosandbox branch, we simply toggle a System Setting to Show (or not) items On Desktop. This reduces memory requirements and allows for continuous updates of the actual Desktop background/wallpaper.
